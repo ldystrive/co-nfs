@@ -1,0 +1,1 @@
+/usr/bin/cc     CMakeFiles/main.dir/nfsclient-async.c.o  -o main  -L/usr/local/lib -lnfs -Wl,-rpath,/usr/local/lib 
