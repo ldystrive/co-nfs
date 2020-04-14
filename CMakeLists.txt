@@ -6,7 +6,7 @@ add_definitions(-std=c++11)
 
 find_package(
     Boost 1.54.0
-    COMPONENTS system filesystem
+    COMPONENTS system filesystem program_options
     REQUIRED
 )
 

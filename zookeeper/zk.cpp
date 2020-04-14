@@ -1,6 +1,8 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <future>
+
 
 #include "zookeeper/zk.h"
 
@@ -45,7 +47,14 @@ zhandle_t *ZkUtils::init_handle(watcher_fn fn, const vector<string> &hosts)
             mhost += string(",") + host;
     }
 
-    this->zh = zookeeper_init(mhost.c_str(), fn, this->timeout, 0, NULL, 0);
-    
+    promise<int> *prom = new promise<int>();
+    future<int> future = prom->get_future();
+    this->zh = zookeeper_init(mhost.c_str(), fn, this->timeout, 0, prom, 0);
+    int state = future.get();
+    delete prom;
+    if (state != ZOO_CONNECTED_STATE) {
+        cout << "error: failed to server:" << mhost << endl;
+        return NULL;
+    }
     return this->zh;
 }

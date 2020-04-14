@@ -25,11 +25,19 @@ public:
     zhandle_t *zh;
     vector<string> m_hosts;
     const static int timeout;
+    string localIp;
 
 public:
     zhandle_t *init_handle(watcher_fn fn, const vector<string> &hosts);
     int close_handle();
+    
+    // 检查zookeeper server中的结构，如果没有初始化则初始化
+    void createLayout();
+    
+    // 拉取和该ip有关的信息
+    void getNodesInfo();
     int createRecursively();
+
 
 private:
     ZkUtils();
