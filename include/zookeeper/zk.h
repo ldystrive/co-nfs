@@ -1,5 +1,4 @@
-#ifndef __ZK_H_
-#define __ZK_H_
+#pragma once
 
 #include <zookeeper/zookeeper.h>
 #include <iostream>
@@ -15,20 +14,31 @@
 
 using namespace std;
 
-class zkUtils {
+class ZkUtils {
+
+private:
+    ZkUtils();
+    ~ZkUtils();
+    ZkUtils(const ZkUtils&);
+    const ZkUtils &operator=(const ZkUtils &);
+
+private:
+    static ZkUtils *m_sInstance;
+    static std::mutex m_mux;
+
+public:
+    static ZkUtils *&GetInstance();
+    static void deleteInstance();
+    
 
 public:
 
-zhandle_t *zh;
-vector<string> hosts;
+    zhandle_t *zh;
+    vector<string> hosts;
+    const static int timeout;
 
-
-int init_zoo(zhandle_t *zh, vector<string> hosts, watcher_fn fn);
-int init_handle(watcher_fn fn);
-int close_handle();
-int createRecursively();
-
-
+public:
+    int init_handle(watcher_fn fn, const vector<string> &hosts);
+    int close_handle();
+    int createRecursively();
 };
-
-#endif
