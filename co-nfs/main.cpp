@@ -2,11 +2,13 @@
 
 #include <string>
 #include <vector>
+#include <cassert>
 #include <csignal>
 #include <thread>
 #include <chrono>
 
 #include "zookeeper/zk.h"
+#include "zookeeper/zkCallback.h"
 #include "inotify/inotifyUtils.h"
 #include "co-nfs/handle.h"
 
@@ -16,13 +18,18 @@ void signalHandler(int signum)
 {
     cout << "Interrupt signal (" << signum << ") received.\n" << endl;
 
+    ZkUtils *zk = ZkUtils::GetInstance();
+    int res = zookeeper_close(zk->zh);
+    cout << "close zookeeper:" << zerror(res) << endl;
+    zk->deleteInstance();
     exit(signum);
 }
 
 void init(const vector<string> &hosts) {
     
     ZkUtils *zk = ZkUtils::GetInstance();
-    zk->init_handle(zk_init_cb, hosts);
+    zhandle_t *zh = zk->init_handle(zk_init_cb, hosts);
+    assert(zh != NULL);
 
 }
 

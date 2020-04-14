@@ -1,7 +1,9 @@
 find_library(ZOOKEEPER zookeeper_mt /usr/local/lib /usr/lib)
 
 find_package(Threads)
-set(ZOO_LIB_SRCS zk.cpp)
+set(ZOO_LIB_SRCS
+    zk.cpp
+    zkCallback.cpp)
 
 add_executable(zk_test main.cpp ${ZOO_LIB_SRCS})
 
