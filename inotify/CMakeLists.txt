@@ -11,7 +11,7 @@ find_package(Threads)
 
 add_executable(inotify_example main.cpp)
 
-add_library(inotify_utils inotifyUtils.h inotifyUtils.cpp)
+add_library(inotify_utils inotifyUtils.cpp)
 
 target_link_libraries(inotify_example
     PRIVATE

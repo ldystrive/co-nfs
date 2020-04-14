@@ -18,6 +18,7 @@ volatile bool connected = false;
 condition_variable cond;
 mutex mux;
 
+
 void signal_on_request_finished()
 {
     unique_lock<mutex> lock(mux);
@@ -103,9 +104,9 @@ int main(int argc, char *argv[])
     zhandle_t *handle = init_handle();
     assert(handle != NULL);
     wait_until_connected();
-    create(handle, "/test1");
-    string data("23333");
-    set(handle, "/test1", data.c_str());
+    create(handle, "/test");
+    // string data("23333");
+    // set(handle, "/test1", data.c_str());
     this_thread::sleep_for(chrono::seconds(10));
     close_zhandle(handle);
     return 0;
