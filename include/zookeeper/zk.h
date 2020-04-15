@@ -12,6 +12,8 @@
 #include <vector>
 #include <string>
 
+#define _DEV
+
 using namespace std;
 
 class ZkUtils {
@@ -33,6 +35,13 @@ public:
     
     // 检查zookeeper server中的结构，如果没有初始化则初始化
     void createLayout();
+
+    // 同步检测path是否存在
+    int exists(string path);
+    int create(string path, string value);
+    int checkAndCreate(string path, string value);
+
+    int createSharedNode(string nodeName, const vector<string> &adresses, const vector<string> &ignore);
     
     // 拉取和该ip有关的信息
     void getNodesInfo();

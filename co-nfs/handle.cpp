@@ -7,6 +7,6 @@ void init(const vector<string> &hosts, const string &localIp) {
     zhandle_t *zh = zk->init_handle(zk_init_cb, hosts);
     assert(zh != NULL);
     zk->localIp = localIp;
-    // zk->createLayout();
+    zk->createLayout();
     
 }
