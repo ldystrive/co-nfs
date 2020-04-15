@@ -41,7 +41,7 @@ public:
     int create(string path, string value);
     int checkAndCreate(string path, string value);
 
-    int createSharedNode(string nodeName, const vector<string> &adresses, const vector<string> &ignore);
+    void createSharedNode(string nodeName, const vector<pair<string, string> > &addresses, const vector<string> &ignore);
     
     // 拉取和该ip有关的信息
     void getNodesInfo();

@@ -2,6 +2,7 @@
 #include <mutex>
 #include <thread>
 #include <future>
+#include <functional>
 #include <utility>
 
 #include "zookeeper/zkCallback.h"
@@ -103,12 +104,37 @@ void ZkUtils::createLayout()
     int res = 0;
     this->checkAndCreate(string("/co_nfs"), string(""));
     this->checkAndCreate(string("/co_nfs/shared_nodes"), string(""));
-    this->checkAndCreate(string("/co-nfs/node-ip-map"), string(""));
-
+    this->checkAndCreate(string("/co_nfs/node_ip_map"), string(""));
 // 添加数据用于开发
 #ifdef _DEV
-
+    vector<pair<string, string> > addresses = {{string("192.168.137.132"), string("/data")},
+                                               {string("192.168.137.133"), string("/data")}};
+    vector<string> ignore = {"test_ignore1.txt", "test_ignore2.txt"};
+    this->createSharedNode(string("node1"), addresses, ignore);
 #endif
 
 }
 
+void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string> > &addresses, const vector<string> &ignore)
+{
+    // this->checkAndCreate(string("/co_nfs/node_ip_map/") + )
+    string prefix = string("/co_nfs/shared_nodes/") + nodeName;
+    this->checkAndCreate(prefix, string(""));
+    
+    string ignoreFiles = string();
+    for (const auto &i : ignore) {
+        if (ignoreFiles == "") ignoreFiles = i;
+        else ignoreFiles += string(",") + i;
+    }
+    this->checkAndCreate(prefix + "/ignore", ignoreFiles);
+
+    this->checkAndCreate(prefix + "/addresses", string());
+    hash<string> stringHash;
+    for (const auto &address : addresses) {
+        string ip = address.first;
+        string mount = address.second;
+        this->checkAndCreate(prefix + "/addresses/" + ip + "_" + to_string(stringHash(mount)), mount);
+    }
+    this->checkAndCreate(prefix + "/events", "");
+
+}
