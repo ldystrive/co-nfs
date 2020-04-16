@@ -37,5 +37,29 @@ void future_string_completion_cb(int rc, const char *value, const void *data)
         return;
     }
     promise<pair<int, string> > *prom = static_cast<promise<pair<int, string> > *>(const_cast<void *>(data));
+    if (rc != 0) {
+        prom->set_value({rc, ""});
+        return;
+    }
     prom->set_value(pair<int, string>(rc, string(value)));
+}
+
+void future_strings_completion_cb(int rc, const struct String_vector *strings, const void *data)
+{
+    cout << __PRETTY_FUNCTION__ << endl;
+    cout << "error code:" << rc << endl;
+    if (data == NULL) {
+        return;
+    }
+    promise<pair<int, vector<string>>> *prom = \
+        static_cast<promise<pair<int, vector<string>>> *>(const_cast<void *>(data));
+    if (rc != 0) {
+        prom->set_value({rc, {}});
+        return;
+    }
+    vector<string> strs;
+    for (int i = 0; i < strings->count; i++) {
+        strs.push_back(strings->data[i]);
+    }
+    prom->set_value(pair<int, vector<string>>(rc, strs));
 }

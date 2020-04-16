@@ -1,5 +1,13 @@
+#include <iostream>
+#include <cstdio>
+#include <utility>
+#include <vector>
+#include <string>
+
 #include "zookeeper/zk.h"
 #include "zookeeper/zkCallback.h"
+
+using namespace std;
 
 void init(const vector<string> &hosts, const string &localIp) {
     

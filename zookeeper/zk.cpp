@@ -66,11 +66,12 @@ int ZkUtils::exists(string path)
     promise<int> *prom = new promise<int>();
     future<int> future = prom->get_future();
     int res = zoo_aexists(this->zh, path.c_str(), 0, future_rc_completion_cb, (void *)prom);
-    int rc = future.get();
-    delete prom;
     if (res == ZOK) {
+        int rc = future.get();
+        delete prom;
         return rc;
     }
+    delete prom;
     return res;
 }
 
@@ -80,11 +81,12 @@ int ZkUtils::create(string path, string value)
     future<pair<int, string> > future = prom->get_future();
     int res = zoo_acreate(this->zh, path.c_str(), value.c_str(), value.length(), \
         &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, future_string_completion_cb, (void *)prom);
-    pair<int, string> v = future.get();
-    delete prom;
     if (res == ZOK) {
+        pair<int, string> v = future.get();
+        delete prom;
         return v.first;
     }
+    delete prom;
     return res;
 }
 
@@ -136,5 +138,18 @@ void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string
         this->checkAndCreate(prefix + "/addresses/" + ip + "_" + to_string(stringHash(mount)), mount);
     }
     this->checkAndCreate(prefix + "/events", "");
+}
 
+pair<int, vector<string> > ZkUtils::ls(const string &path)
+{
+    promise<pair<int, vector<string>>> *prom = new promise<pair<int, vector<string>>>();
+    future<pair<int, vector<string>>> future = prom->get_future();
+    int res = zoo_aget_children(this->zh, path.c_str(), 0, future_strings_completion_cb, prom);
+    if (res == ZOK) {
+        pair<int, vector<string>> v = future.get();
+        delete prom;
+        return v;
+    }
+    delete prom;
+    return {res, {}};
 }
