@@ -153,3 +153,13 @@ pair<int, vector<string> > ZkUtils::ls(const string &path)
     delete prom;
     return {res, {}};
 }
+
+void ZkUtils::setNodeWatcher(const string &path, void *ctx)
+{
+    zoo_awexists(this->zh, path.c_str(), set_watcher_cb, ctx, future_rc_completion_cb, NULL);
+}
+
+void ZkUtils::setChildrenWatcher(const string &path, void *ctx)
+{
+    zoo_awget_children(this->zh, path.c_str(), set_watcher_cb, ctx, future_strings_completion_cb, NULL);
+}

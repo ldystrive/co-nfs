@@ -41,6 +41,9 @@ public:
     int create(string path, string value);
     int checkAndCreate(string path, string value);
 
+    void setNodeWatcher(const string &path, void *ctx);
+    void setChildrenWatcher(const string &path, void *ctx);
+
     pair<int, vector<string> > ls(const string &path);
 
     void createSharedNode(string nodeName, const vector<pair<string, string> > &addresses, const vector<string> &ignore);

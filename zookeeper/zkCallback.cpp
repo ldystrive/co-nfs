@@ -63,3 +63,20 @@ void future_strings_completion_cb(int rc, const struct String_vector *strings, c
     }
     prom->set_value(pair<int, vector<string>>(rc, strs));
 }
+
+void set_watcher_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
+{
+    cout << __PRETTY_FUNCTION__ << endl;
+    cout << "type:" << type << endl;
+    cout << "state:" << state << endl;
+    cout << "path:" << path << endl;
+
+    // TODO: parse ctx and do sth.
+    // register a new watcher
+    if (type == 3) {
+        zoo_awexists(zh, path, set_watcher_cb, ctx, future_rc_completion_cb, NULL);
+    }
+    else if (type == 4) {
+        zoo_awget_children(zh, path, set_watcher_cb, ctx, future_strings_completion_cb, NULL);
+    }
+}

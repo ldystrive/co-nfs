@@ -16,3 +16,8 @@ void future_string_completion_cb(int rc, const char *value, const void *data);
 
 // 通过future返回error code, strings
 void future_strings_completion_cb(int rc, const struct String_vector *strings, const void *data);
+
+
+// 设置watcher的回调函数
+void set_watcher_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx);
+

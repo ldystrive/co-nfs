@@ -17,4 +17,6 @@ void init(const vector<string> &hosts, const string &localIp) {
     zk->localIp = localIp;
     zk->createLayout();
     
+    // zk->setNodeWatcher("/test", NULL);
+    // zk->setChildrenWatcher("/test", NULL);
 }
