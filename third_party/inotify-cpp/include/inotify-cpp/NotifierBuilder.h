@@ -30,10 +30,12 @@ class NotifierBuilder {
     auto setEventTimeout(std::chrono::milliseconds timeout, EventObserver eventObserver)
         -> NotifierBuilder&;
 
+
   private:
     std::shared_ptr<Inotify> mInotify;
     std::map<Event, EventObserver> mEventObserver;
     EventObserver mUnexpectedEventObserver;
+    
 };
 
 NotifierBuilder BuildNotifier();

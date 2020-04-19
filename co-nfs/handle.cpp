@@ -6,6 +6,7 @@
 
 #include "zookeeper/zk.h"
 #include "zookeeper/zkCallback.h"
+#include "co-nfs/sharedNode.h"
 
 using namespace std;
 

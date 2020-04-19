@@ -79,6 +79,7 @@ auto NotifierBuilder::setEventTimeout(
 {
     auto onEventTimeout = [eventObserver](FileSystemEvent fileSystemEvent) {
         Notification notification { static_cast<Event>(fileSystemEvent.mask),
+                                    fileSystemEvent,
                                     fileSystemEvent.path,
                                     fileSystemEvent.eventTime };
         eventObserver(notification);
@@ -97,7 +98,7 @@ auto NotifierBuilder::runOnce() -> void
 
     Event currentEvent = static_cast<Event>(fileSystemEvent->mask);
 
-    Notification notification { currentEvent, fileSystemEvent->path, fileSystemEvent->eventTime };
+    Notification notification { currentEvent, *fileSystemEvent, fileSystemEvent->path, fileSystemEvent->eventTime };
 
     for (auto& eventAndEventObserver : mEventObserver) {
         auto& event = eventAndEventObserver.first;

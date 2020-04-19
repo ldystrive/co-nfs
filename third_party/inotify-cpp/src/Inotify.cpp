@@ -122,6 +122,7 @@ void Inotify::watchDirectoryRecursively(fs::path path)
     }
 
     for (auto& path : paths) {
+        std::cout << path << std::endl;
         watchFile(path);
     }
 }
@@ -309,12 +310,13 @@ ssize_t Inotify::readEventsIntoBuffer(std::vector<uint8_t>& eventBuffer)
         if (mEpollEvents[n].data.fd == mStopPipeFd[mPipeReadIdx]) {
             break;
         }
-
-        length = read(mEpollEvents[n].data.fd, eventBuffer.data(), eventBuffer.size());
-        if (length == -1) {
-            mError = errno;
-            if(mError == EINTR){
-                break;
+        if (mEpollEvents[n].data.fd == mInotifyFd) {
+            length = read(mEpollEvents[n].data.fd, eventBuffer.data(), eventBuffer.size());
+            if (length == -1) {
+                mError = errno;
+                if(mError == EINTR){
+                    break;
+                }
             }
         }
     }
@@ -344,7 +346,7 @@ void Inotify::readEventsFromBuffer(
         if (fs::is_directory(path)) {
             event->mask |= IN_ISDIR;
         }
-        FileSystemEvent fsEvent(event->wd, event->mask, path, std::chrono::steady_clock::now());
+        FileSystemEvent fsEvent(event->wd, event->mask, event->cookie, path, std::chrono::steady_clock::now());
 
         if (!fsEvent.path.empty()) {
             events.push_back(fsEvent);

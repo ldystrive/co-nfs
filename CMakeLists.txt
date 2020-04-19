@@ -18,6 +18,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/include/nfs
     ${PROJECT_SOURCE_DIR}/include/zookeeper
     ${PROJECT_SOURCE_DIR}/include/co-nfs
+    ${PROJECT_SOURCE_DIR}/third_party/inotify-cpp/include
     /usr/include
     /usr/local/include)
 

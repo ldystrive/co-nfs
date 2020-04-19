@@ -21,25 +21,28 @@ int main(int argc, char** argv)
     // Set the event handler which will be used to process particular events
     auto handleNotification = [&](Notification notification) {
         std::cout << "Event " << notification.event << " on " << notification.path << " at "
-                  << notification.time.time_since_epoch().count() << " was triggered." << std::endl;
+                  << notification.time.time_since_epoch().count() << " was triggered." 
+                  << " cookie:" << notification.fileSystemEvent.cookie << std::endl;
     };
 
     // Set the a separate unexpected event handler for all other events. An exception is thrown by
     // default.
     auto handleUnexpectedNotification = [](Notification notification) {
-        /*std::cout << "Event " << notification.event << " on " << notification.path << " at "
-                  << notification.time.time_since_epoch().count()
-                  << " was triggered, but was not expected" << std::endl;*/
+        //std::cout << "Event " << notification.event << " on " << notification.path << " at "
+        //         << notification.time.time_since_epoch().count()
+        //          << " was triggered, but was not expected" << std::endl;
     };
 
     // Set the events to be notified for
     auto events = { // Event::open | Event::is_dir, // some events occur in combinations
                     // Event::access,
+                    Event::create | Event::is_dir,
                     Event::create,
                     Event::modify,
-                    Event::remove,
+                    Event::moved_from,
                     Event::moved_to,
-                    Event::moved_from };
+                    Event::remove,
+                    Event::move };
 
     // The notifier is configured to watch the parsed path for the defined events. Particular files
     // or paths can be ignored(once).
