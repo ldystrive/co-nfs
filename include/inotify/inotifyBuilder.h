@@ -37,8 +37,6 @@ public:
 private:
     auto handleEvent(const InotifyEvent &inotifyEvent) -> void;
     auto addEvent(const InotifyEvent &InotifyEvent) -> void;
-    auto removePath(boost::filesystem::path path) -> void;
-    auto addPath(boost::filesystem::path path) -> void;
 
 private:
     std::shared_ptr<Inotify> mInotify;

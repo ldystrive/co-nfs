@@ -1,5 +1,7 @@
 #include "inotify/inotifyBuilder.h"
 
+#include <exception>
+
 namespace inotify {
 
 InotifyBuilder::InotifyBuilder()
@@ -12,31 +14,58 @@ InotifyBuilder BuildInotify()
 
 auto InotifyBuilder::watchpathRecursively(boost::filesystem::path path) -> InotifyBuilder&
 {
-    mInotify->watchDirectoryRecursively(path);
+    try {
+        mInotify->watchDirectoryRecursively(path);
+    }
+    catch(const std::exception& e) {
+        std::cerr << e.what() << '\n';
+    }
+    
     return *this;
 }
 
 auto InotifyBuilder::watchFile(boost::filesystem::path path) -> InotifyBuilder&
 {
-    mInotify->watchFile(path);
+    try {
+        mInotify->watchFile(path);
+    }
+    catch(const std::exception &e) {
+        std::cout << e.what() << "\n";
+    }
     return *this;
 }
 
 auto InotifyBuilder::unwatchFile(boost::filesystem::path path) -> InotifyBuilder&
 {
-    mInotify->unwatchFile(path);
+    try {
+        mInotify->unwatchFile(path);
+    }
+    catch(const std::exception& e) {
+        std::cerr << e.what() << '\n';
+    }
     return *this;
 }
 
 auto InotifyBuilder::ignoreFileOnce(boost::filesystem::path path) -> InotifyBuilder&
 {
-    mInotify->ignoreFileOnce(path);
+    try {
+        mInotify->ignoreFileOnce(path);
+    }
+    catch(const std::exception& e) {
+        std::cerr << e.what() << '\n';
+    }
+    
     return *this;
 }
 
 auto InotifyBuilder::ignoreFile(boost::filesystem::path path) -> InotifyBuilder&
 {
-    mInotify->ignoreFile(path);
+    try {
+        mInotify->ignoreFile(path);
+    }
+    catch(const std::exception& e) {
+        std::cerr << e.what() << '\n';
+    }
     return *this;
 }
 
@@ -120,13 +149,38 @@ auto InotifyBuilder::addEvent(const InotifyEvent &inotifyEvent) -> void
             containsEvent(inotifyEvent.event, Event::moved_to)) {
             
             isEventUsed = true;
-            removePath(m.first.path);
-            addPath(inotifyEvent.path);
+            if (containsEvent(m.first.event, Event::is_dir)) {
+                unwatchFile(m.first.path);
+            }
+            if (containsEvent(inotifyEvent.event, Event::is_dir)) {
+                unwatchFile(inotifyEvent.path);
+            }
             mEventQueue.pop();
             mMoveObserver(m.first, inotifyEvent);
         }
+        // 稍后处理
         else if (std::chrono::duration_cast<std::chrono::milliseconds>(timeNow - m.second) < timeout) {
             break;
+        }
+        // 超时， 从监控文件夹移出，相当于一个remove操作
+        else if (containsEvent(m.first.event, Event::moved_from)) {
+            Event newEvent = Event::remove;
+            if (containsEvent(m.first.event, Event::is_dir)) {
+                newEvent = newEvent | Event::is_dir;
+            }
+            InotifyEvent newInotifyEvent = {newEvent, m.first.cookie, m.first.path};
+            handleEvent(newInotifyEvent);
+            mEventQueue.pop();
+        }
+        // 超时，移动到监控目录，相当于create操作
+        else if (containsEvent(m.first.event, Event::moved_to)) {
+            Event newEvent = Event::create;
+            if (containsEvent(m.first.event, Event::is_dir)) {
+                newEvent = newEvent | Event::is_dir;
+            }
+            InotifyEvent newInotifyEvent = {newEvent, m.first.cookie, m.first.path};
+            handleEvent(newInotifyEvent);
+            mEventQueue.pop();
         }
         else {
             mUnexpectedEventObserver(m.first);
@@ -141,8 +195,24 @@ auto InotifyBuilder::addEvent(const InotifyEvent &inotifyEvent) -> void
 
 auto InotifyBuilder::handleEvent(const InotifyEvent &inotifyEvent) -> void
 {
-    
+    auto eventAndEventObserver = mEventObserver.find(inotifyEvent.event);
+    if (eventAndEventObserver != mEventObserver.end()) {
+        auto &event = eventAndEventObserver->first;
+        auto &eventObserver = eventAndEventObserver->second;
 
+        if (containsEvent(event, Event::is_dir)) {
+            if (containsEvent(event, Event::create)) {
+                watchFile(inotifyEvent.path);
+            }
+            else if (containsEvent(event, Event::remove)) {
+                unwatchFile(inotifyEvent.path);
+            }
+        }
+        eventObserver(inotifyEvent);
+    }
+    else {
+        mUnexpectedEventObserver(inotifyEvent);
+    }
 }
 
 }
