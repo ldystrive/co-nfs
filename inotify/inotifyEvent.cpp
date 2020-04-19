@@ -7,12 +7,15 @@ namespace inotify {
 
 InotifyEvent::InotifyEvent(
     const Event &event,
+    const uint32_t &cookie,
     const boost::filesystem::path &path)
     : event(event)
+    , cookie(cookie)
     , path(path) {}
 
 InotifyEvent::InotifyEvent(const std::string &str)
 {
+    cookie = 0;
     auto pos = str.find(";");
     if (pos == str.npos) {
         event = Event::all;

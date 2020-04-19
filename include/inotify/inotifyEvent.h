@@ -14,6 +14,7 @@ class InotifyEvent {
 public:
     InotifyEvent(
         const Event &event,
+        const uint32_t &cookie,
         const boost::filesystem::path &path);
     
     // parse string to InotifyEvent
@@ -22,6 +23,7 @@ public:
 
 public:
     Event event;
+    uint32_t cookie;
     boost::filesystem::path path;
 };
 

@@ -23,6 +23,7 @@ public:
     auto run() -> void;
     auto runOnce() -> void;
     auto stop() -> void;
+    // 需要先调用onEvent[s]，再调用watch
     auto watchpathRecursively(boost::filesystem::path path) ->InotifyBuilder&;
     auto watchFile(boost::filesystem::path path) ->InotifyBuilder&;
     auto unwatchFile(boost::filesystem::path path) ->InotifyBuilder&;
@@ -34,10 +35,16 @@ public:
     auto onUnexpectedEvent(EventObserver) -> InotifyBuilder&;
 
 private:
+    auto handleEvent(const InotifyEvent &inotifyEvent) -> void;
+    auto addEvent(const InotifyEvent &InotifyEvent) -> void;
+    auto removePath(boost::filesystem::path path) -> void;
+    auto addPath(boost::filesystem::path path) -> void;
+
+private:
     std::shared_ptr<Inotify> mInotify;
     std::map<Event, EventObserver> mEventObserver;
     MoveObserver mMoveObserver;
-    std::list<std::pair<InotifyEvent, std::chrono::steady_clock::time_point>> mEventList;
+    std::queue<std::pair<InotifyEvent, std::chrono::steady_clock::time_point>> mEventQueue;
     EventObserver mUnexpectedEventObserver;
 };
 
