@@ -16,6 +16,8 @@ class FileSystemEvent {
 
     ~FileSystemEvent();
 
+    const static FileSystemEvent voidEvent;
+
   public:
     int wd;
     uint32_t mask;
@@ -23,4 +25,8 @@ class FileSystemEvent {
     boost::filesystem::path path;
     std::chrono::steady_clock::time_point eventTime;
 };
+
+
+bool isVoidEvent(const FileSystemEvent &fileSystemEvent);
+
 }

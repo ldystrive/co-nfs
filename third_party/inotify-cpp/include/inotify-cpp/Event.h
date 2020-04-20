@@ -7,6 +7,7 @@
 namespace inotify {
 
 enum class Event : std::uint32_t {
+    none = 0,
     access = IN_ACCESS,
     attrib = IN_ATTRIB,
     close_write = IN_CLOSE_WRITE,

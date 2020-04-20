@@ -20,4 +20,12 @@ FileSystemEvent::FileSystemEvent(
 FileSystemEvent::~FileSystemEvent()
 {
 }
+
+const FileSystemEvent FileSystemEvent::voidEvent = {-1, 0, 0, boost::filesystem::path(""), std::chrono::steady_clock::now()};
+
+bool isVoidEvent(const FileSystemEvent &fileSystemEvent)
+{
+    return fileSystemEvent.wd == -1 && fileSystemEvent.cookie == 0 && fileSystemEvent.mask == 0;
+}
+
 }

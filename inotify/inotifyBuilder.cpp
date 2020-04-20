@@ -132,6 +132,9 @@ auto InotifyBuilder::stop() -> void
 auto InotifyBuilder::addEvent(const InotifyEvent &inotifyEvent) -> void
 {
     bool isEventUsed = false;
+    if (inotifyEvent.event == Event::none) {
+        isEventUsed = true;
+    }
     std::chrono::steady_clock::time_point timeNow = std::chrono::steady_clock::now();
     std::chrono::milliseconds timeout(250);
 

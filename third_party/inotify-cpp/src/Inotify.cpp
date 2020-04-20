@@ -1,5 +1,6 @@
 
 #include <inotify-cpp/Inotify.h>
+#include <inotify-cpp/FileSystemEvent.h>
 
 #include <string>
 #include <vector>
@@ -238,7 +239,7 @@ boost::optional<FileSystemEvent> Inotify::getNextEvent()
 {
     std::vector<FileSystemEvent> newEvents;
 
-    while (mEventQueue.empty() && !mStopped) {
+    if (mEventQueue.empty() && !mStopped) {
         auto length = readEventsIntoBuffer(mEventBuffer);
         readEventsFromBuffer(mEventBuffer.data(), length, newEvents);
         filterEvents(newEvents, mEventQueue);
@@ -246,6 +247,10 @@ boost::optional<FileSystemEvent> Inotify::getNextEvent()
 
     if (mStopped) {
         return boost::none;
+    }
+
+    if (mEventQueue.empty()) {
+        return FileSystemEvent::voidEvent;
     }
 
     auto event = mEventQueue.front();
@@ -299,7 +304,7 @@ ssize_t Inotify::readEventsIntoBuffer(std::vector<uint8_t>& eventBuffer)
 {
     ssize_t length = 0;
     length = 0;
-    auto timeout = -1;
+    auto timeout = 100;
     auto nFdsReady = epoll_wait(mEpollFd, mEpollEvents, MAX_EPOLL_EVENTS, timeout);
 
     if (nFdsReady == -1) {
