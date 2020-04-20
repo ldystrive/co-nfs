@@ -17,13 +17,6 @@ add_executable(inotify_example main.cpp)
 
 add_library(inotify_utils ${INOTIFY_LIB_SRCS})
 
-target_link_libraries(inotify_example
-    PRIVATE
-    inotify-cpp
-    Boost::system
-    Boost::filesystem
-    ${CMAKE_THREAD_LIBS_INIT})   
-
 target_link_libraries(inotify_utils
     PRIVATE
     inotify-cpp
@@ -31,3 +24,11 @@ target_link_libraries(inotify_utils
     Boost::system
     Boost::filesystem
     ${CMAKE_THREAD_LIBS_INIT})
+
+target_link_libraries(inotify_example
+    PRIVATE
+    inotify_utils
+    inotify-cpp
+    Boost::system
+    Boost::filesystem
+    ${CMAKE_THREAD_LIBS_INIT})   

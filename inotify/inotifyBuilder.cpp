@@ -18,6 +18,7 @@ auto InotifyBuilder::watchpathRecursively(boost::filesystem::path path) -> Inoti
         mInotify->watchDirectoryRecursively(path);
     }
     catch(const std::exception& e) {
+        std::cerr << __PRETTY_FUNCTION__ << ' ';
         std::cerr << e.what() << '\n';
     }
     
@@ -30,6 +31,7 @@ auto InotifyBuilder::watchFile(boost::filesystem::path path) -> InotifyBuilder&
         mInotify->watchFile(path);
     }
     catch(const std::exception &e) {
+        std::cerr << __PRETTY_FUNCTION__ << ' ';
         std::cout << e.what() << "\n";
     }
     return *this;
@@ -41,6 +43,7 @@ auto InotifyBuilder::unwatchFile(boost::filesystem::path path) -> InotifyBuilder
         mInotify->unwatchFile(path);
     }
     catch(const std::exception& e) {
+        std::cerr << __PRETTY_FUNCTION__ << ' ';
         std::cerr << e.what() << '\n';
     }
     return *this;
@@ -52,6 +55,7 @@ auto InotifyBuilder::ignoreFileOnce(boost::filesystem::path path) -> InotifyBuil
         mInotify->ignoreFileOnce(path);
     }
     catch(const std::exception& e) {
+        std::cerr << __PRETTY_FUNCTION__ << ' ';
         std::cerr << e.what() << '\n';
     }
     
@@ -64,6 +68,7 @@ auto InotifyBuilder::ignoreFile(boost::filesystem::path path) -> InotifyBuilder&
         mInotify->ignoreFile(path);
     }
     catch(const std::exception& e) {
+        std::cerr << __PRETTY_FUNCTION__ << ' ';
         std::cerr << e.what() << '\n';
     }
     return *this;
@@ -150,10 +155,11 @@ auto InotifyBuilder::addEvent(const InotifyEvent &inotifyEvent) -> void
             
             isEventUsed = true;
             if (containsEvent(m.first.event, Event::is_dir)) {
-                unwatchFile(m.first.path);
+                // unwatchFile(m.first.path);
+                // unwatch by ON_IGNORED event
             }
             if (containsEvent(inotifyEvent.event, Event::is_dir)) {
-                unwatchFile(inotifyEvent.path);
+                watchFile(inotifyEvent.path);
             }
             mEventQueue.pop();
             mMoveObserver(m.first, inotifyEvent);
@@ -205,7 +211,8 @@ auto InotifyBuilder::handleEvent(const InotifyEvent &inotifyEvent) -> void
                 watchFile(inotifyEvent.path);
             }
             else if (containsEvent(event, Event::remove)) {
-                unwatchFile(inotifyEvent.path);
+                // unwatchFile(inotifyEvent.path);
+                // unwatch by ON_IGNORED event
             }
         }
         eventObserver(inotifyEvent);

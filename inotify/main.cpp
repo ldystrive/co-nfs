@@ -1,4 +1,4 @@
-#include <inotify-cpp/NotifierBuilder.h>
+#include "inotify/inotifyBuilder.h"
 
 #include <boost/filesystem.hpp>
 
@@ -18,46 +18,37 @@ int main(int argc, char** argv)
     // Parse the directory to watch
     boost::filesystem::path path(argv[1]);
 
-    // Set the event handler which will be used to process particular events
-    auto handleNotification = [&](Notification notification) {
-        std::cout << "Event " << notification.event << " on " << notification.path << " at "
-                  << notification.time.time_since_epoch().count() << " was triggered." 
-                  << " cookie:" << notification.fileSystemEvent.cookie << std::endl;
+    auto handleEvent = [&] (InotifyEvent inotifyEvent) {
+        std::cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
+            " was triggered." << std::endl;
+    };
+    auto handleMoveEvent = [&] (InotifyEvent inotifyEvent1, InotifyEvent inotifyEvent2) {
+        std::cout << "Event " << inotifyEvent1.event << " " << inotifyEvent1.path << " " << 
+            inotifyEvent2.event << " " << inotifyEvent2.path << std::endl;
+    };
+    auto handleUnexpectedEvent = [&] (InotifyEvent inotifyEvent) {
+        std::cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
+            " was triggered, but was not expected." << std::endl;
     };
 
-    // Set the a separate unexpected event handler for all other events. An exception is thrown by
-    // default.
-    auto handleUnexpectedNotification = [](Notification notification) {
-        //std::cout << "Event " << notification.event << " on " << notification.path << " at "
-        //         << notification.time.time_since_epoch().count()
-        //          << " was triggered, but was not expected" << std::endl;
+    auto events = {
+        Event::create,
+        Event::create | Event::is_dir,
+        Event::modify,
+        Event::remove,
+        Event::remove | Event::is_dir,
+        Event::moved_from,
+        Event::moved_to
     };
 
-    // Set the events to be notified for
-    auto events = { // Event::open | Event::is_dir, // some events occur in combinations
-                    // Event::access,
-                    Event::create | Event::is_dir,
-                    Event::create,
-                    Event::modify,
-                    Event::moved_from,
-                    Event::moved_to,
-                    Event::remove,
-                    Event::move };
-
-    // The notifier is configured to watch the parsed path for the defined events. Particular files
-    // or paths can be ignored(once).
-    auto notifier = BuildNotifier()
-                        .watchPathRecursively(path)
-                        .ignoreFileOnce("fileIgnoredOnce")
-                        .ignoreFile("fileIgnored")
-                        .onEvents(events, handleNotification)
-                        .onUnexpectedEvent(handleUnexpectedNotification);
-
-    // The event loop is started in a separate thread context.
+    auto notifier = BuildInotify()
+                        .onEvents(events, handleEvent)
+                        .onMoveEvent(handleMoveEvent)
+                        .onUnexpectedEvent(handleUnexpectedEvent)
+                        .watchpathRecursively(path);
+        
     std::thread thread([&](){ notifier.run(); });
-
-    // Terminate the event loop after 60 seconds
-    std::this_thread::sleep_for(std::chrono::seconds(60));
+    std::this_thread::sleep_for(std::chrono::seconds(600));
     notifier.stop();
     thread.join();
     return 0;
