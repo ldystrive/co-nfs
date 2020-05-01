@@ -30,12 +30,14 @@ void signalHandler(int signum)
 int main(int argc, char *argv[])
 {
     bpo::options_description opt("all options");
-    string localIp;
+    string localPath;
     vector<string> zoo_hosts;
+    string nodeName;
 
     opt.add_options()
-        ("localIp,l", bpo::value<string>(&localIp)->default_value("127.0.0.1", "local ip"))
-        ("server,s", bpo::value<vector<string> >()->multitoken(), "zoo server addresses");
+        ("localIp,l", bpo::value<string>(&localPath)->default_value("192.168.137.132/data", "local path"))
+        ("server,s", bpo::value<vector<string> >()->multitoken(), "zoo server addresses")
+        ("name,n", bpo::value<string>(&nodeName)->default_value("node1"), "node name");
     
     bpo::variables_map vm;
     try {
@@ -57,7 +59,7 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, signalHandler);
 
-    init(zoo_hosts, localIp);
+    init(zoo_hosts, localPath, nodeName);
     
     while(true) {
         this_thread::sleep_for(chrono::minutes(5));

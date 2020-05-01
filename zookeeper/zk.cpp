@@ -61,6 +61,18 @@ zhandle_t *ZkUtils::init_handle(watcher_fn fn, const vector<string> &hosts)
     return this->zh;
 }
 
+int ZkUtils::initLocalPath(const string &str)
+{
+    int pos = str.find('/');
+    if (pos == str.npos) {
+        return -1;
+    }
+    localIp = str.substr(0, pos);
+    localDir = str.substr(pos, str.size());
+    cout << "localPath:" << localIp << localDir << endl;
+    return 0;
+}
+
 int ZkUtils::exists(string path)
 {
     promise<int> *prom = new promise<int>();
@@ -75,12 +87,12 @@ int ZkUtils::exists(string path)
     return res;
 }
 
-int ZkUtils::create(string path, string value)
+int ZkUtils::create(string path, string value, const int mode)
 {
     promise<pair<int, string> > *prom = new promise<pair<int, string> >();
     future<pair<int, string> > future = prom->get_future();
     int res = zoo_acreate(this->zh, path.c_str(), value.c_str(), value.length(), \
-        &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, future_string_completion_cb, (void *)prom);
+        &ZOO_OPEN_ACL_UNSAFE, mode, future_string_completion_cb, (void *)prom);
     if (res == ZOK) {
         pair<int, string> v = future.get();
         delete prom;
@@ -90,12 +102,12 @@ int ZkUtils::create(string path, string value)
     return res;
 }
 
-int ZkUtils::checkAndCreate(string path, string value)
+int ZkUtils::checkAndCreate(string path, string value, const int mode)
 {
     int res = this->exists(path);
     
     if (res == ZNONODE) {
-        res = this->create(path, value);
+        res = this->create(path, value, mode);
     }
     return res;
 }
@@ -113,11 +125,15 @@ void ZkUtils::createLayout()
                                                {string("192.168.137.133"), string("/data")}};
     vector<string> ignore = {"test_ignore1.txt", "test_ignore2.txt"};
     this->createSharedNode(string("node1"), addresses, ignore);
+#else
+    this->createSharedNode(this->nodeName, { {this->localIp, this->localDir} },
+        {".tmp_in", ".tmp_out"});
 #endif
 
 }
 
-void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string> > &addresses, const vector<string> &ignore)
+void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string> > &addresses,
+    const vector<string> &ignore)
 {
     // this->checkAndCreate(string("/co_nfs/node_ip_map/") + )
     string prefix = string("/co_nfs/shared_nodes/") + nodeName;
@@ -135,7 +151,8 @@ void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string
     for (const auto &address : addresses) {
         string ip = address.first;
         string mount = address.second;
-        this->checkAndCreate(prefix + "/addresses/" + ip + "_" + to_string(stringHash(mount)), mount);
+        this->checkAndCreate(prefix + "/addresses/" + ip + "_" + to_string(stringHash(mount)),
+            mount, ZOO_EPHEMERAL);
     }
     this->checkAndCreate(prefix + "/events", "");
 }

@@ -9,7 +9,6 @@
 
 using namespace std;
 
-SharedNode::SharedNode() {}
 SharedNode::~SharedNode() {}
 
 SharedNode::SharedNode(const string &name, const string &ignore, const vector<pair<string, string>> &addrs)

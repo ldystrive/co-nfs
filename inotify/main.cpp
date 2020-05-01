@@ -45,6 +45,7 @@ int main(int argc, char** argv)
                         .onEvents(events, handleEvent)
                         .onMoveEvent(handleMoveEvent)
                         .onUnexpectedEvent(handleUnexpectedEvent)
+                        .ignoreFile(path / "a")
                         .watchpathRecursively(path);
         
     std::thread thread([&](){ notifier.run(); });

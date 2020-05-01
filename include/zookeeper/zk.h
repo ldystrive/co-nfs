@@ -12,7 +12,7 @@
 #include <vector>
 #include <string>
 
-#define _DEV
+// #define _DEV
 
 using namespace std;
 
@@ -28,18 +28,22 @@ public:
     vector<string> m_hosts;
     const static int timeout;
     string localIp;
+    string localDir;
+    string nodeName;
 
 public:
     zhandle_t *init_handle(watcher_fn fn, const vector<string> &hosts);
     int close_handle();
+
+    int initLocalPath(const string& str);
     
     // 检查zookeeper server中的结构，如果没有初始化则初始化
     void createLayout();
 
     // 同步检测path是否存在
     int exists(string path);
-    int create(string path, string value);
-    int checkAndCreate(string path, string value);
+    int create(string path, string value, const int mode=ZOO_PERSISTENT);
+    int checkAndCreate(string path, string value, const int mode=ZOO_PERSISTENT);
 
     void setNodeWatcher(const string &path, void *ctx);
     void setChildrenWatcher(const string &path, void *ctx);
