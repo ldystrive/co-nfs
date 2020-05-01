@@ -64,6 +64,25 @@ void future_strings_completion_cb(int rc, const struct String_vector *strings, c
     prom->set_value(pair<int, vector<string>>(rc, strs));
 }
 
+void future_data_completion_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data)
+{
+    cout << __PRETTY_FUNCTION__ << endl;
+    cout << "error code:" << rc << endl;
+    if (data == NULL) {
+        return;
+    }
+    promise<pair<int, vector<uint8_t>>> *prom = \
+        static_cast<promise<pair<int, vector<uint8_t>>> *>(const_cast<void *>(data));
+    if (rc != 0) {
+        prom->set_value({rc, {}});
+        return;
+    }
+    vector<uint8_t> arr(value, value+value_len);
+    prom->set_value(pair<int, vector<uint8_t>>(rc, arr));
+
+}
+
+
 void set_watcher_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
 {
     cout << __PRETTY_FUNCTION__ << endl;

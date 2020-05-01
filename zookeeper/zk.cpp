@@ -38,6 +38,11 @@ void ZkUtils::deleteInstance()
 ZkUtils::ZkUtils() {}
 ZkUtils::~ZkUtils() {}
 
+string ZkUtils::getNodePath()
+{
+    return string("/co_nfs/shared_nodes/") + nodeName;
+}
+
 zhandle_t *ZkUtils::init_handle(watcher_fn fn, const vector<string> &hosts)
 {
     string mhost;
@@ -166,6 +171,20 @@ pair<int, vector<string> > ZkUtils::ls(const string &path)
         pair<int, vector<string>> v = future.get();
         delete prom;
         return v;
+    }
+    delete prom;
+    return {res, {}};
+}
+
+pair<int, string> ZkUtils::get(const string &path)
+{
+    promise<pair<int, vector<uint8_t>>> *prom = new promise<pair<int, vector<uint8_t>>>();
+    future<pair<int, vector<uint8_t>>> future = prom->get_future();
+    int res = zoo_aget(this->zh, path.c_str(), 0, future_data_completion_cb, prom);
+    if (res ==ZOK) {
+        pair<int, vector<uint8_t>> v = future.get();
+        delete prom;
+        return {v.first, string(v.second.begin(), v.second.end())};
     }
     delete prom;
     return {res, {}};

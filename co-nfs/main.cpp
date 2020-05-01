@@ -12,6 +12,7 @@
 #include "zookeeper/zkCallback.h"
 #include "inotify/inotifyUtils.h"
 #include "co-nfs/handle.h"
+#include "co-nfs/confs.h"
 
 using namespace std;
 namespace bpo = boost::program_options;
@@ -59,7 +60,8 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, signalHandler);
 
-    init(zoo_hosts, localPath, nodeName);
+    // init(zoo_hosts, localPath, nodeName);
+    Confs confs(zoo_hosts, localPath, nodeName);
     
     while(true) {
         this_thread::sleep_for(chrono::minutes(5));

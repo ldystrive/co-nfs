@@ -49,6 +49,7 @@ public:
     void setChildrenWatcher(const string &path, void *ctx);
 
     pair<int, vector<string> > ls(const string &path);
+    pair<int, string> get(const string &path);
 
     void createSharedNode(string nodeName, const vector<pair<string, string> > &addresses, const vector<string> &ignore);
     
@@ -56,6 +57,7 @@ public:
     void getNodesInfo();
     int createRecursively();
 
+    string getNodePath();
 
 private:
     ZkUtils();

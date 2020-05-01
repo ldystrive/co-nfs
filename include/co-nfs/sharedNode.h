@@ -13,6 +13,7 @@ using namespace std;
 class SharedNode {
 public:
     ~SharedNode();
+    SharedNode();
     SharedNode(const string &name, const string &ignore, const vector<pair<string, string>> &addrs);
     
     // str likes: 192.168.137.132_1567464848020645536, ip_hash(mount path)
