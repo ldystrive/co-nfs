@@ -26,15 +26,12 @@ public:
 
 
 public:
-    static bool isSubdir(boost::filesystem::path dir1, boost::filesystem::path dir2);
-
-public:
     SharedNode node;
+    std::thread inotifyThread;
 
 private:
     Confs();
     ZkUtils *zk;
-    std::thread inotifyThread;
     inotify::InotifyBuilder notifier;
     boost::filesystem::path inFolder;
     boost::filesystem::path outFolder;

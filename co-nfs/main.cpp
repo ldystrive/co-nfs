@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     string nodeName;
 
     opt.add_options()
-        ("localIp,l", bpo::value<string>(&localPath)->default_value("192.168.137.132/data", "local path"))
+        ("localIp,l", bpo::value<string>(&localPath)->default_value("192.168.137.132/shareData", "local path"))
         ("server,s", bpo::value<vector<string> >()->multitoken(), "zoo server addresses")
         ("name,n", bpo::value<string>(&nodeName)->default_value("node1"), "node name");
     
@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
     try {
         Confs confs(zoo_hosts, localPath, nodeName);
         confs.watchLocalFiles();
+        confs.inotifyThread.join();
     }
     catch(const exception &e) {
         cerr << e.what() << endl;

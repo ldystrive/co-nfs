@@ -117,24 +117,32 @@ boost::optional<SharedNode> Confs::getNode(string nodeName)
     return node;
 }
 
-
-
 int Confs::watchLocalFiles()
 {
     auto handleEvent = [&] (InotifyEvent inotifyEvent) {
+        // 判断是否和临时文件夹有关
+        if (mutils::isSubdir(inFolder, inotifyEvent.path) || 
+            mutils::isSubdir(outFolder, inotifyEvent.path)) {
+            return;
+        }
         cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
             " was triggered." << endl;
-        
-        string str = zk->localIp + ";" + inotifyEvent.toString();
+        string str = zk->localIp + "_" + inotifyEvent.toString();
         zk->create(zk->getNodePath() + "/events/event-", str, ZOO_EPHEMERAL_SEQUENTIAL);
     };
 
     auto handleMoveEvent = [&] (InotifyEvent inotifyEvent1, InotifyEvent inotifyEvent2) {
-        if (inotifyEvent1.path == zk->localDir + "/.tmp_in")
-        
+        // 判断是否和临时文件夹有关
+        if (mutils::isSubdir(inFolder, inotifyEvent1.path)  || 
+            mutils::isSubdir(outFolder, inotifyEvent1.path) ||
+            mutils::isSubdir(inFolder, inotifyEvent2.path)  || 
+            mutils::isSubdir(outFolder, inotifyEvent2.path)) {
+            return;
+        }
+        string str = zk->localIp + "_" + inotifyEvent1.toString() + "_" + inotifyEvent2.toString();
         std::cout << "Event " << inotifyEvent1.event << " " << inotifyEvent1.path << " " << 
             inotifyEvent2.event << " " << inotifyEvent2.path << std::endl;
-        
+        zk->create(zk->getNodePath() + "/events/event-", str, ZOO_EPHEMERAL_SEQUENTIAL);
     };
 
     auto handleUnexpectedEvent = [&] (InotifyEvent inotifyEvent) {
