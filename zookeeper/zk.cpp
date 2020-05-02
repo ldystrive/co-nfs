@@ -74,6 +74,9 @@ int ZkUtils::initLocalPath(const string &str)
     }
     localIp = str.substr(0, pos);
     localDir = str.substr(pos, str.size());
+    while (localDir.length() > 1 && localDir[localDir.length() - 1] == '/') {
+        localDir = localDir.substr(0, localDir.length() - 1);
+    }
     cout << "localPath:" << localIp << localDir << endl;
     return 0;
 }

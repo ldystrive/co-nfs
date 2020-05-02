@@ -10,16 +10,44 @@
 #include "zookeeper/zk.h"
 #include "zookeeper/zkCallback.h"
 #include "co-nfs/confs.h"
+#include "co-nfs/utils.h"
 #include "inotify/inotifyBuilder.h"
 #include "inotify/inotifyEvent.h"
 
 using namespace std;
 using namespace inotify;
 
+static bool initLocalEnv(string localDir, boost::filesystem::path inFolder, boost::filesystem::path outFolder)
+{
+    // 判断localDir是否存在且是nfs的挂载点
+    if (!boost::filesystem::exists(boost::filesystem::path(localDir))) {
+        cerr << "localDir " << localDir << " not found." << endl;
+        return false;
+    }
+    string str = mutils::exec(string("showmount -e"));
+    vector<string> tokens = mutils::split(str, "\n");
+    vector<string> dirs;
+    for (int i = 1; i < tokens.size(); i++) {
+        dirs.push_back(mutils::split(tokens[i], " ")[0]);
+    }
+    if (find(dirs.begin(), dirs.end(), localDir) == dirs.end()) {
+        return false;
+    }
+
+    // 判断inFolder outFolder是否存在，并创建
+    if (!boost::filesystem::is_directory(inFolder)) {
+        boost::filesystem::create_directory(inFolder);
+    }
+
+    if (!boost::filesystem::is_directory(outFolder)) {
+        boost::filesystem::create_directory(outFolder);
+    }
+    return true;
+}
+
 Confs::~Confs() 
 {
     notifier.stop();
-
 }
 
 Confs::Confs(const vector<string> &hosts, const string &localPath, const string &nodeName)
@@ -28,9 +56,18 @@ Confs::Confs(const vector<string> &hosts, const string &localPath, const string 
     zk = ZkUtils::GetInstance();
     zhandle_t *zh = zk->init_handle(zk_init_cb, hosts);
     assert(zh != NULL);
+
     zk->nodeName = nodeName;
     assert(zk->initLocalPath(localPath) == 0);
-    
+
+    inFolder = boost::filesystem::path(zk->localDir + "/.tmp_in");
+    outFolder = boost::filesystem::path(zk->localDir + "/.tmp_out");
+
+    if (!initLocalEnv(zk->localDir, inFolder, outFolder)) {
+        string err = string("failed. ") + zk->localDir + " is not a nfs server point.";
+        throw invalid_argument(string(err));
+    }
+
     zk->createLayout();
 
     auto nodePtr = getNode(nodeName);
@@ -80,16 +117,24 @@ boost::optional<SharedNode> Confs::getNode(string nodeName)
     return node;
 }
 
+
+
 int Confs::watchLocalFiles()
 {
     auto handleEvent = [&] (InotifyEvent inotifyEvent) {
         cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
             " was triggered." << endl;
+        
+        string str = zk->localIp + ";" + inotifyEvent.toString();
+        zk->create(zk->getNodePath() + "/events/event-", str, ZOO_EPHEMERAL_SEQUENTIAL);
     };
 
     auto handleMoveEvent = [&] (InotifyEvent inotifyEvent1, InotifyEvent inotifyEvent2) {
+        if (inotifyEvent1.path == zk->localDir + "/.tmp_in")
+        
         std::cout << "Event " << inotifyEvent1.event << " " << inotifyEvent1.path << " " << 
             inotifyEvent2.event << " " << inotifyEvent2.path << std::endl;
+        
     };
 
     auto handleUnexpectedEvent = [&] (InotifyEvent inotifyEvent) {

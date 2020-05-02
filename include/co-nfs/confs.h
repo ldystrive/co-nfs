@@ -24,6 +24,10 @@ public:
     // 监控本地文件，并将修改事件发送到zookeeper server
     int watchLocalFiles();
 
+
+public:
+    static bool isSubdir(boost::filesystem::path dir1, boost::filesystem::path dir2);
+
 public:
     SharedNode node;
 
@@ -32,4 +36,6 @@ private:
     ZkUtils *zk;
     std::thread inotifyThread;
     inotify::InotifyBuilder notifier;
+    boost::filesystem::path inFolder;
+    boost::filesystem::path outFolder;
 };

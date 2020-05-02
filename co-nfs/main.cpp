@@ -61,8 +61,14 @@ int main(int argc, char *argv[])
     signal(SIGINT, signalHandler);
 
     // init(zoo_hosts, localPath, nodeName);
-    Confs confs(zoo_hosts, localPath, nodeName);
-    confs.watchLocalFiles();
+    try {
+        Confs confs(zoo_hosts, localPath, nodeName);
+        confs.watchLocalFiles();
+    }
+    catch(const exception &e) {
+        cerr << e.what() << endl;
+        exit(0);
+    }
     
     while(true) {
         this_thread::sleep_for(chrono::minutes(5));
