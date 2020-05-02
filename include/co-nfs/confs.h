@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <thread>
 
 #include <boost/optional.hpp>
 
@@ -17,7 +18,11 @@ public:
         const std::string &localPath,
         const std::string &nodeName);
     
+    // 从zookeeper server上拉取结点信息
     boost::optional<SharedNode> getNode(std::string nodeName);
+
+    // 监控本地文件，并将修改事件发送到zookeeper server
+    int watchLocalFiles();
 
 public:
     SharedNode node;
@@ -25,5 +30,6 @@ public:
 private:
     Confs();
     ZkUtils *zk;
-    inotify::InotifyBuilder inotifyBuilder;
+    std::thread inotifyThread;
+    inotify::InotifyBuilder notifier;
 };

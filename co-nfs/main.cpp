@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
 
     // init(zoo_hosts, localPath, nodeName);
     Confs confs(zoo_hosts, localPath, nodeName);
+    confs.watchLocalFiles();
     
     while(true) {
         this_thread::sleep_for(chrono::minutes(5));

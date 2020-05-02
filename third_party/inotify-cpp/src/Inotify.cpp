@@ -123,7 +123,6 @@ void Inotify::watchDirectoryRecursively(fs::path path)
     }
 
     for (auto& path : paths) {
-        std::cout << path << std::endl;
         watchFile(path);
     }
 }
