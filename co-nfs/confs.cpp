@@ -104,6 +104,12 @@ void Confs::updateIgnore()
 {
     auto _ignore = pullIgnore();
     if (_ignore) {
+        auto files = mutils::split(*_ignore, ",");
+        for (auto &file : files) {
+            file = zk->localDir + "/" + file;
+        }
+        notifier.ignoreFiles(files);
+        
         boost::unique_lock<boost::shared_mutex> m(mMutex);
         this->mNode.ignore = move(*_ignore);
     }
@@ -144,7 +150,7 @@ boost::optional<vector<pair<string, string>>> Confs::pullAddresses()
 boost::optional<string> Confs::pullIgnore()
 {
     string path = zk->getNodePath();
-     cout << "get ignore info." << endl;
+    cout << "get ignore info." << endl;
     auto v = zk->get(path + "/ignore");
     return v.first ? boost::none : boost::optional<string>(v.second);
 }

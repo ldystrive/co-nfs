@@ -25,6 +25,7 @@
 #include <atomic>
 
 #include <inotify-cpp/FileSystemEvent.h>
+#include <boost/thread/thread.hpp>
 
 #define MAX_EVENTS       4096
 /**
@@ -84,6 +85,7 @@ class Inotify {
   void unwatchFile(boost::filesystem::path file);
   void ignoreFileOnce(boost::filesystem::path file);
   void ignoreFile(boost::filesystem::path file);
+  void ignoreFiles(const std::vector<std::string> &files);
   void setEventMask(uint32_t eventMask);
   uint32_t getEventMask();
   void setEventTimeout(std::chrono::milliseconds eventTimeout, std::function<void(FileSystemEvent)> onEventTimeout);
@@ -107,6 +109,7 @@ private:
   std::chrono::steady_clock::time_point mLastEventTime;
   uint32_t mEventMask;
   uint32_t mThreadSleep;
+  boost::shared_mutex mMutex;
   std::vector<std::string> mIgnoredDirectories;
   std::vector<std::string> mOnceIgnoredDirectories;
   std::queue<FileSystemEvent> mEventQueue;

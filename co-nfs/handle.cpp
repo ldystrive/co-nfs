@@ -45,4 +45,12 @@ void ignore_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
     cout << __PRETTY_FUNCTION__ << endl;
     cout << "type:" << type << " state:" << state << " path:" << path << endl;
 
+    zoo_awexists(zh, path, ignore_cb, ctx, future_rc_completion_cb, NULL);
+
+    Confs *confs = static_cast<Confs *>(ctx);
+    confs->mPool->enqueue([confs](){
+        confs->updateIgnore();
+        SharedNode node = confs->getNode();
+        cout << "new ignore:" << node.ignore << endl;
+    });
 }

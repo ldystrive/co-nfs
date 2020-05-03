@@ -174,9 +174,15 @@ void Inotify::ignoreFileOnce(fs::path file)
 
 void Inotify::ignoreFile(fs::path file)
 {
+    boost::unique_lock<boost::shared_mutex> m(mMutex);
     mIgnoredDirectories.push_back(file.string());
 }
 
+void Inotify::ignoreFiles(const std::vector<std::string> &files)
+{
+    boost::unique_lock<boost::shared_mutex> m(mMutex);
+    mIgnoredDirectories = std::move(files);
+}
 
 void Inotify::unwatchFile(fs::path file)
 {
@@ -276,6 +282,7 @@ bool Inotify::hasStopped()
 
 bool Inotify::isIgnored(std::string file)
 {
+    boost::shared_lock<boost::shared_mutex> m(mMutex);
     for (unsigned i = 0; i < mOnceIgnoredDirectories.size(); ++i) {
         size_t pos = file.find(mOnceIgnoredDirectories[i]);
         if (pos != std::string::npos) {

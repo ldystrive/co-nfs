@@ -74,6 +74,18 @@ auto InotifyBuilder::ignoreFile(boost::filesystem::path path) -> InotifyBuilder&
     return *this;
 }
 
+auto InotifyBuilder::ignoreFiles(const std::vector<std::string> &files) -> InotifyBuilder&
+{
+    try {
+        mInotify->ignoreFiles(files);
+    }
+    catch(const std::exception& e) {
+        std::cerr << __PRETTY_FUNCTION__ << ' ';
+        std::cerr << e.what() << '\n';
+    }
+    return *this;
+}
+
 auto InotifyBuilder::onEvent(Event event, EventObserver eventOberver) -> InotifyBuilder&
 {
     mInotify->setEventMask(mInotify->getEventMask() | static_cast<std::uint32_t>(event));

@@ -29,6 +29,7 @@ public:
     auto unwatchFile(boost::filesystem::path path) ->InotifyBuilder&;
     auto ignoreFileOnce(boost::filesystem::path path) ->InotifyBuilder&;
     auto ignoreFile(boost::filesystem::path path) ->InotifyBuilder&;
+    auto ignoreFiles(const std::vector<std::string> &files) ->InotifyBuilder&;
     auto onEvent(Event event, EventObserver) -> InotifyBuilder&;
     auto onEvents(std::vector<Event> event, EventObserver) -> InotifyBuilder&;
     auto onMoveEvent(MoveObserver) -> InotifyBuilder&;
