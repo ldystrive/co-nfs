@@ -12,6 +12,7 @@
 #include "co-nfs/confs.h"
 #include "co-nfs/utils.h"
 #include "co-nfs/handle.h"
+#include "co-nfs/threadPool.h"
 #include "inotify/inotifyBuilder.h"
 #include "inotify/inotifyEvent.h"
 
@@ -52,7 +53,7 @@ Confs::~Confs()
 }
 
 Confs::Confs(const vector<string> &hosts, const string &localPath, const string &nodeName)
-: notifier(BuildInotify())
+: notifier(BuildInotify()), mPool(make_shared<ThreadPool>(THREADS_NUM))
 {
     zk = ZkUtils::GetInstance();
     zhandle_t *zh = zk->init_handle(zk_init_cb, hosts);
@@ -92,9 +93,7 @@ void Confs::setNode(SharedNode node)
 
 void Confs::updateAddresses()
 {
-    cout << "@@1" << endl;
     auto _addrs = pullAddresses();
-    cout << "@@2" << endl;
     if (_addrs) {
         boost::unique_lock<boost::shared_mutex> m(mMutex);
         this->mNode.addresses = move(*_addrs);

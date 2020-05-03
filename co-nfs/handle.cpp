@@ -19,19 +19,18 @@ void addresses_cb(zhandle_t *zh, int type, int state, const char *path, void *ct
 {
     cout << __PRETTY_FUNCTION__ << endl;
     cout << "type:" << type << " state:" << state << " path:" << path << endl;
-    cout << "!1" << endl;
     zoo_awget_children(zh, path, addresses_cb, ctx, future_strings_completion_cb, NULL);
-    cout << "!2" << endl;
+    
     Confs *confs = static_cast<Confs *>(ctx);
-    cout << "!3" << endl;
-    confs->updateAddresses();
-    cout << "!4" << endl;
-    SharedNode node = confs->getNode();
-    cout << "!5" << endl;
-    cout << "new addresses:" << endl;
-    for (auto a : node.addresses) {
-        cout << a.first << ' ' << a.second << endl;
-    }
+
+    confs->mPool->enqueue([confs](){
+        confs->updateAddresses();
+        SharedNode node = confs->getNode();
+        cout << "new addresses:" << endl;
+        for (auto a : node.addresses) {
+            cout << a.first << ' ' << a.second << endl;
+        }
+    });
 }
 
 void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)

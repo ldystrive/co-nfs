@@ -10,8 +10,11 @@
 #include <boost/optional.hpp>
 
 #include "sharedNode.h"
+#include "threadPool.h"
 #include "../zookeeper/zk.h"
 #include "../inotify/inotifyBuilder.h"
+
+const size_t THREADS_NUM = 4;
 
 class Confs {
 public:
@@ -33,6 +36,7 @@ public:
 
 public:
     std::thread inotifyThread;
+    shared_ptr<ThreadPool> mPool;
 
 public:
     SharedNode getNode();
@@ -45,7 +49,9 @@ private:
     boost::shared_mutex mMutex;
 
 private:
-    Confs();
+    Confs() = delete;
+    Confs(const Confs&) = delete;
+    Confs& operator=(const Confs&) = delete;
     ZkUtils *zk;
     EventQueue mEventQueue;
     inotify::InotifyBuilder notifier;
