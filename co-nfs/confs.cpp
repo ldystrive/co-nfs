@@ -92,7 +92,9 @@ void Confs::setNode(SharedNode node)
 
 void Confs::updateAddresses()
 {
+    cout << "@@1" << endl;
     auto _addrs = pullAddresses();
+    cout << "@@2" << endl;
     if (_addrs) {
         boost::unique_lock<boost::shared_mutex> m(mMutex);
         this->mNode.addresses = move(*_addrs);
