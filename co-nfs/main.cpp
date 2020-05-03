@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
     try {
         Confs confs(zoo_hosts, localPath, nodeName);
         confs.watchLocalFiles();
+        confs.watchServerInfo();
         confs.inotifyThread.join();
     }
     catch(const exception &e) {

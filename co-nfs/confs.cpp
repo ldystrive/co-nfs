@@ -11,6 +11,7 @@
 #include "zookeeper/zkCallback.h"
 #include "co-nfs/confs.h"
 #include "co-nfs/utils.h"
+#include "co-nfs/handle.h"
 #include "inotify/inotifyBuilder.h"
 #include "inotify/inotifyEvent.h"
 
@@ -70,26 +71,59 @@ Confs::Confs(const vector<string> &hosts, const string &localPath, const string 
 
     zk->createLayout();
 
-    auto nodePtr = getNode(nodeName);
+    auto nodePtr = pullNode();
     if (!nodePtr) {
-        cerr << "failed to pull node info." << endl;
-        exit(0);
+        throw invalid_argument("failed to pull node info.");
     }
-    node = *nodePtr;
+    mNode = *nodePtr;
 }
 
-boost::optional<SharedNode> Confs::getNode(string nodeName)
+SharedNode Confs::getNode()
+{
+    boost::shared_lock<boost::shared_mutex> m(mMutex);
+    return mNode;
+}
+
+void Confs::setNode(SharedNode node)
+{
+    boost::unique_lock<boost::shared_mutex> m(mMutex);
+    this->mNode = node;
+}
+
+void Confs::updateAddresses()
+{
+    auto _addrs = pullAddresses();
+    if (_addrs) {
+        boost::unique_lock<boost::shared_mutex> m(mMutex);
+        this->mNode.addresses = move(*_addrs);
+    }
+}
+
+void Confs::updateIgnore()
+{
+    auto _ignore = pullIgnore();
+    if (_ignore) {
+        boost::unique_lock<boost::shared_mutex> m(mMutex);
+        this->mNode.ignore = move(*_ignore);
+    }
+}
+
+void Confs::updateNode()
+{
+    auto _node = pullNode();
+    if (_node) {
+        setNode(*_node);
+    }
+}
+
+boost::optional<vector<pair<string, string>>> Confs::pullAddresses()
 {
     string path = zk->getNodePath();
     pair<int, vector<string>> addrs = zk->ls(path + "/addresses");
     if (addrs.first != 0) {
         return boost::none;
     }
-
-    SharedNode node;
-    node.nodeName = nodeName;
-    
-    // get addresses
+    vector<pair<string, string>> res;
     cout << "get addresses." << endl;
     for (auto str : addrs.second) {
         string ip = SharedNode::parseAddr(str);
@@ -101,19 +135,32 @@ boost::optional<SharedNode> Confs::getNode(string nodeName)
         else {
             dirPath = v.second;
         }
-        node.addresses.push_back({ip, dirPath});
+        res.push_back({ip, dirPath});
     }
+    return res;
+}
 
-    // get ignore info
-    cout << "get ignore info." << endl;
+boost::optional<string> Confs::pullIgnore()
+{
+    string path = zk->getNodePath();
+     cout << "get ignore info." << endl;
     auto v = zk->get(path + "/ignore");
-    if (v.first != 0) {
+    return v.first ? boost::none : boost::optional<string>(v.second);
+}
+
+boost::optional<SharedNode> Confs::pullNode()
+{
+    SharedNode node;
+    node.nodeName = zk->nodeName;
+    
+    auto addrs = pullAddresses();
+    auto ignore = pullIgnore();
+    
+    if (!addrs || !ignore) {
         return boost::none;
     }
-    else {
-        node.ignore = v.second;
-    }
-
+    node.addresses = move(*addrs);
+    node.ignore    = move(*ignore);
     return node;
 }
 
@@ -165,5 +212,23 @@ int Confs::watchLocalFiles()
             .onUnexpectedEvent(handleUnexpectedEvent)
             .watchpathRecursively(boost::filesystem::path(zk->localDir));
     inotifyThread = thread([&](){ notifier.run(); });
+    return 0;
+}
+
+int Confs::watchServerInfo()
+{
+    string path = zk->getNodePath();
+    // addresses
+    string addrPath = path + "/addresses";
+    zoo_awget_children(zk->zh, addrPath.c_str(), addresses_cb, this, future_strings_completion_cb, NULL);
+
+    // events
+    string eventPath = path + "/events";
+    zoo_awget_children(zk->zh, eventPath.c_str(), events_cb, this, future_strings_completion_cb, NULL);
+
+    // ignore
+    string ignorePath = path + "/ignore";
+    zoo_awexists(zk->zh, ignorePath.c_str(), ignore_cb, this, future_rc_completion_cb, NULL);
+
     return 0;
 }

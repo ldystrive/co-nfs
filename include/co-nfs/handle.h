@@ -5,4 +5,8 @@
 
 #include "../zookeeper/zk.h"
 
-void init(const std::vector<std::string> &hosts, const std::string &localPath, const std::string &nodeName);
+void addresses_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx);
+
+void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx);
+
+void ignore_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx);

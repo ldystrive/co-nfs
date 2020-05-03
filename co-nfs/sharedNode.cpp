@@ -34,3 +34,33 @@ string SharedNode::parseAddr(const string &str)
     }
     return str.substr(0, pos);
 }
+
+EventQueue::EventQueue() {}
+EventQueue::~EventQueue() {}
+
+boost::optional<string> EventQueue::getNextEvent()
+{
+    if (empty()) {
+        return boost::none;
+    }
+    return mEvents.front().second;
+}
+
+bool EventQueue::empty() 
+{
+    return mEvents.empty();
+}
+
+void EventQueue::insertEvent(const pair<string, string> &event)
+{
+    auto iter = mEvents.begin();
+    while (iter != mEvents.end() && (*iter).first < event.first) {
+        iter++;
+    }
+    mEvents.insert(iter, event);
+}
+
+void EventQueue::pop()
+{
+    mEvents.pop_front();
+}

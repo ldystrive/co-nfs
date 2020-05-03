@@ -2,11 +2,14 @@ project(co-nfs)
 
 cmake_minimum_required(VERSION 3.8)
 
-add_definitions(-std=c++11)
+# add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(
     Boost 1.54.0
-    COMPONENTS system filesystem program_options
+    COMPONENTS system filesystem program_options thread
     REQUIRED
 )
 

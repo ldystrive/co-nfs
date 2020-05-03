@@ -1,11 +1,5 @@
 aux_source_directory(. CONFS_DIR_SRCS)
 
-find_package(
-    Boost 1.54.0
-    COMPONENTS system filesystem program_options
-    REQUIRED
-)
-
 find_package(Threads)
 
 add_executable(co-nfs ${CONFS_DIR_SRCS})

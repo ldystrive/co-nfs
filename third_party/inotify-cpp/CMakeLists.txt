@@ -14,11 +14,6 @@ set(INOTIFY_LIB_HEADER
 
 cmake_minimum_required(VERSION 3.8)
 
-find_package(
-        Boost 1.54.0
-        COMPONENTS system filesystem
-        REQUIRED
-)
 
 add_library(${INOTIFY_LIB_NAME} SHARED ${INOTIFY_LIB_SRCS} ${INOTIFY_LIB_HEADER})
 set_target_properties(${INOTIFY_LIB_NAME} PROPERTIES LINKER_LANUAGE CXX)
@@ -28,6 +23,7 @@ target_compile_features(${INOTIFY_LIB_NAME} PUBLIC cxx_std_11)
 target_link_libraries(${INOTIFY_LIB_NAME}
         INTERFACE
         Boost::system
+        Boost::thread
         Boost::filesystem)
 
 target_include_directories(${INOTIFY_LIB_NAME} PUBLIC
