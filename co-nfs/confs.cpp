@@ -184,11 +184,13 @@ int Confs::watchLocalFiles()
             mutils::isSubdir(outFolder, inotifyEvent.path)) {
             return;
         }
-        cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
+        std::cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
             " was triggered." << endl;
-        json j;
-        j["ip"] = zk->localIp;
-        j["event"] = inotifyEvent.toJson();
+        json j = {
+            {"ip", zk->localIp},
+            {"path", zk->localDir},
+            {"event", inotifyEvent.toJson()}
+        };
         zk->create(zk->getNodePath() + "/events/event-", j.dump(), ZOO_EPHEMERAL_SEQUENTIAL);
     };
 
@@ -200,10 +202,12 @@ int Confs::watchLocalFiles()
             mutils::isSubdir(outFolder, inotifyEvent2.path)) {
             return;
         }
-        json j;
-        j["ip"] = zk->localIp;
-        j["event1"] = inotifyEvent1.toJson();
-        j["event2"] = inotifyEvent2.toJson();
+        json j = {
+            {"ip", zk->localIp},
+            {"path", zk->localDir},
+            {"event1", inotifyEvent1.toJson()},
+            {"event2", inotifyEvent2.toJson()}
+        };
         std::cout << "Event " << inotifyEvent1.event << " " << inotifyEvent1.path << " " << 
             inotifyEvent2.event << " " << inotifyEvent2.path << std::endl;
         zk->create(zk->getNodePath() + "/events/event-", j.dump(), ZOO_EPHEMERAL_SEQUENTIAL);
@@ -260,7 +264,7 @@ int Confs::watchLocalFiles()
         Event::close_write | Event::is_dir
     };
 
-    cout << "watch path:" << zk->localDir << endl;
+    std::cout << "watch path:" << zk->localDir << endl;
     notifier.onEvents(events, handleEvent)
             // .onEvents(openEvents, handleOpenEvent)
             // .onEvents(closeNoWriteEvents, handleCloseNoWriteEvent)
