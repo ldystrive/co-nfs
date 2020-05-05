@@ -15,6 +15,7 @@
 #include "../inotify/inotifyBuilder.h"
 
 const size_t THREADS_NUM = 4;
+// #define CHECK_NFS_MOUNT
 
 class Confs {
 public:

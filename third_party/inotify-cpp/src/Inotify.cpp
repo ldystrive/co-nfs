@@ -282,7 +282,10 @@ bool Inotify::hasStopped()
 
 bool Inotify::isIgnored(std::string file)
 {
-    boost::shared_lock<boost::shared_mutex> m(mMutex);
+    boost::filesystem::path path(file);
+    if (path.has_leaf() && path.leaf().string()[0] == '.') {
+        return true;
+    }
     for (unsigned i = 0; i < mOnceIgnoredDirectories.size(); ++i) {
         size_t pos = file.find(mOnceIgnoredDirectories[i]);
         if (pos != std::string::npos) {
@@ -290,7 +293,7 @@ bool Inotify::isIgnored(std::string file)
             return true;
         }
     }
-
+    boost::shared_lock<boost::shared_mutex> m(mMutex);
     for (unsigned i = 0; i < mIgnoredDirectories.size(); ++i) {
         size_t pos = file.find(mIgnoredDirectories[i]);
         if (pos != std::string::npos) {

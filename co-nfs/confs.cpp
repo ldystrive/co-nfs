@@ -26,6 +26,7 @@ static bool initLocalEnv(string localDir, boost::filesystem::path inFolder, boos
         cerr << "localDir " << localDir << " not found." << endl;
         return false;
     }
+#ifdef CHECK_NFS_MOUNT
     string str = mutils::exec(string("showmount -e"));
     vector<string> tokens = mutils::split(str, "\n");
     vector<string> dirs;
@@ -35,6 +36,7 @@ static bool initLocalEnv(string localDir, boost::filesystem::path inFolder, boos
     if (find(dirs.begin(), dirs.end(), localDir) == dirs.end()) {
         return false;
     }
+#endif
 
     // 判断inFolder outFolder是否存在，并创建
     if (!boost::filesystem::is_directory(inFolder)) {
@@ -199,6 +201,27 @@ int Confs::watchLocalFiles()
         zk->create(zk->getNodePath() + "/events/event-", str, ZOO_EPHEMERAL_SEQUENTIAL);
     };
 
+    auto handleOpenEvent = [&] (InotifyEvent inotifyEvent) {
+        if (!boost::filesystem::is_regular_file(inotifyEvent.path)) {
+            return;
+        }
+        std::cout << "open Event." << " on " << inotifyEvent.path << std::endl;
+    };
+
+    auto handleCloseNoWriteEvent = [&] (InotifyEvent inotifyEvent) {
+        if (!boost::filesystem::is_regular_file(inotifyEvent.path)) {
+            return;
+        }
+        std::cout << "closeNoWrite Event." << " on " << inotifyEvent.path << std::endl;
+    };
+
+    auto handleCloseWriteEvent = [&] (InotifyEvent inotifyEvent) {
+        if (!boost::filesystem::is_regular_file(inotifyEvent.path)) {
+            return;
+        }
+        std::cout << "closeWrite Event." << " on " << inotifyEvent.path << std::endl;
+    };
+
     auto handleUnexpectedEvent = [&] (InotifyEvent inotifyEvent) {
         cout << "Event" << inotifyEvent.event << " on " << inotifyEvent.path <<
             " was triggered, but was not expected." << endl;
@@ -213,8 +236,27 @@ int Confs::watchLocalFiles()
         Event::moved_from,
         Event::moved_to
     };
+
+    auto openEvents = {
+        Event::open,
+        Event::open | Event::is_dir
+    };
+
+    auto closeNoWriteEvents = {
+        Event::close_nowrite,
+        Event::close_nowrite | Event::is_dir
+    };
+
+    auto closeWriteEvents = {
+        Event::close_write,
+        Event::close_write | Event::is_dir
+    };
+
     cout << "watch path:" << zk->localDir << endl;
     notifier.onEvents(events, handleEvent)
+            .onEvents(openEvents, handleOpenEvent)
+            .onEvents(closeNoWriteEvents, handleCloseNoWriteEvent)
+            .onEvents(closeWriteEvents, handleCloseWriteEvent)
             .onMoveEvent(handleMoveEvent)
             .onUnexpectedEvent(handleUnexpectedEvent)
             .watchpathRecursively(boost::filesystem::path(zk->localDir));
