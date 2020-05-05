@@ -37,6 +37,18 @@ void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
 {
     cout << __PRETTY_FUNCTION__ << endl;
     cout << "type:" << type << " state:" << state << " path:" << path << endl;
+    zoo_awget_children(zh, path, events_cb, ctx, future_strings_completion_cb, NULL);
+
+    Confs *confs = static_cast<Confs *>(ctx);
+
+    confs->mPool->enqueue([confs](){
+        confs->updateEventQueue();
+        auto value = confs->eventQueue.getQueue();
+        cout << "new event queue:" << endl;
+        for (auto a : value) {
+            cout << a.first << ' ' << a.second << endl;
+        }
+    });
 
 }
 

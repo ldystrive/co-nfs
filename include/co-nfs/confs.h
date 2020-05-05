@@ -28,7 +28,7 @@ public:
     boost::optional<SharedNode> pullNode();
     boost::optional<std::vector<std::pair<std::string, std::string>>> pullAddresses();
     boost::optional<std::string> pullIgnore();
-    boost::optional<std::string> pullEventQueue();
+    boost::optional<std::vector<std::pair<std::string, std::string>>> pullEventQueue();
 
     // 监控本地文件，并将修改事件发送到zookeeper server
     int watchLocalFiles();
@@ -43,11 +43,13 @@ public:
     std::shared_ptr<ThreadPool> mPool;
 
 public:
+    EventQueue eventQueue;
     SharedNode getNode();
     void setNode(SharedNode node);
     void updateNode();
     void updateAddresses();
     void updateIgnore();
+    void updateEventQueue();
 
 private:
     SharedNode mNode;
@@ -58,7 +60,6 @@ private:
     Confs(const Confs&) = delete;
     Confs& operator=(const Confs&) = delete;
     ZkUtils *zk;
-    EventQueue mEventQueue;
     inotify::InotifyBuilder notifier;
     boost::filesystem::path inFolder;
     boost::filesystem::path outFolder;

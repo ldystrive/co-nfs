@@ -128,28 +128,39 @@ void Confs::updateNode()
     }
 }
 
+void Confs::updateEventQueue()
+{
+    auto _eventQueue = pullEventQueue();
+    if (_eventQueue) {
+        eventQueue.setQueue(*_eventQueue);
+    }
+}
+
 boost::optional<vector<pair<string, string>>> Confs::pullAddresses()
 {
-    string path = zk->getNodePath();
-    pair<int, vector<string>> addrs = zk->ls(path + "/addresses");
-    if (addrs.first != 0) {
+    string path = zk->getNodePath() + "/addresses";
+    auto value = zk->ls2(path);
+
+    if (value.first != 0) {
         return boost::none;
     }
-    vector<pair<string, string>> res;
-    cout << "get addresses." << endl;
-    for (auto str : addrs.second) {
-        string ip = SharedNode::parseAddr(str);
-        string dirPath;
-        auto v = zk->get(path + "/addresses/" + str);
-        if (v.first != 0) {
-            return boost::none;
-        }
-        else {
-            dirPath = v.second;
-        }
-        res.push_back({ip, dirPath});
+    
+    auto &res = value.second;
+    for (auto &v : res) {
+        v.first = SharedNode::parseAddr(v.first);
     }
+    
     return res;
+}
+
+boost::optional<vector<pair<string, string>>> Confs::pullEventQueue()
+{
+    string path = zk->getNodePath() + "/events";
+    auto value = zk->ls2(path);
+    if (value.first != 0) {
+        return boost::none;
+    }
+    return value.second;
 }
 
 boost::optional<string> Confs::pullIgnore()
