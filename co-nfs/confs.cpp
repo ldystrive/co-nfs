@@ -16,8 +16,11 @@
 #include "inotify/inotifyBuilder.h"
 #include "inotify/inotifyEvent.h"
 
+#include "json/json.hpp"
+
 using namespace std;
 using namespace inotify;
+using json = nlohmann::json;
 
 static bool initLocalEnv(string localDir, boost::filesystem::path inFolder, boost::filesystem::path outFolder)
 {
@@ -183,8 +186,10 @@ int Confs::watchLocalFiles()
         }
         cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
             " was triggered." << endl;
-        string str = zk->localIp + "_" + inotifyEvent.toString();
-        zk->create(zk->getNodePath() + "/events/event-", str, ZOO_EPHEMERAL_SEQUENTIAL);
+        json j;
+        j["ip"] = zk->localIp;
+        j["event"] = inotifyEvent.toJson();
+        zk->create(zk->getNodePath() + "/events/event-", j.dump(), ZOO_EPHEMERAL_SEQUENTIAL);
     };
 
     auto handleMoveEvent = [&] (InotifyEvent inotifyEvent1, InotifyEvent inotifyEvent2) {
@@ -195,10 +200,13 @@ int Confs::watchLocalFiles()
             mutils::isSubdir(outFolder, inotifyEvent2.path)) {
             return;
         }
-        string str = zk->localIp + "_" + inotifyEvent1.toString() + "_" + inotifyEvent2.toString();
+        json j;
+        j["ip"] = zk->localIp;
+        j["event1"] = inotifyEvent1.toJson();
+        j["event2"] = inotifyEvent2.toJson();
         std::cout << "Event " << inotifyEvent1.event << " " << inotifyEvent1.path << " " << 
             inotifyEvent2.event << " " << inotifyEvent2.path << std::endl;
-        zk->create(zk->getNodePath() + "/events/event-", str, ZOO_EPHEMERAL_SEQUENTIAL);
+        zk->create(zk->getNodePath() + "/events/event-", j.dump(), ZOO_EPHEMERAL_SEQUENTIAL);
     };
 
     auto handleOpenEvent = [&] (InotifyEvent inotifyEvent) {
@@ -230,7 +238,7 @@ int Confs::watchLocalFiles()
     auto events = {
         Event::create,
         Event::create | Event::is_dir,
-        Event::modify,
+        Event::close_write,
         Event::remove,
         Event::remove | Event::is_dir,
         Event::moved_from,
@@ -254,9 +262,9 @@ int Confs::watchLocalFiles()
 
     cout << "watch path:" << zk->localDir << endl;
     notifier.onEvents(events, handleEvent)
-            .onEvents(openEvents, handleOpenEvent)
-            .onEvents(closeNoWriteEvents, handleCloseNoWriteEvent)
-            .onEvents(closeWriteEvents, handleCloseWriteEvent)
+            // .onEvents(openEvents, handleOpenEvent)
+            // .onEvents(closeNoWriteEvents, handleCloseNoWriteEvent)
+            // .onEvents(closeWriteEvents, handleCloseWriteEvent)
             .onMoveEvent(handleMoveEvent)
             .onUnexpectedEvent(handleUnexpectedEvent)
             .watchpathRecursively(boost::filesystem::path(zk->localDir));

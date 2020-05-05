@@ -7,6 +7,8 @@
 
 #include <chrono>
 
+#include "../json/json.hpp"
+
 namespace inotify {
 
 class InotifyEvent {
@@ -19,7 +21,9 @@ public:
     
     // parse string to InotifyEvent
     InotifyEvent(const std::string &str);
+    InotifyEvent(const nlohmann::json &j);
     std::string toString();
+    nlohmann::json toJson();
 
 public:
     Event event;
