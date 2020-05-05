@@ -14,7 +14,6 @@
 
 // #define _DEV
 
-using namespace std;
 
 class ZkUtils {
 
@@ -25,39 +24,42 @@ public:
 public:
 
     zhandle_t *zh;
-    vector<string> m_hosts;
+    std::vector<std::string> m_hosts;
     const static int timeout;
-    string localIp;
-    string localDir;
-    string nodeName;
+    std::string localIp;
+    std::string localDir;
+    std::string nodeName;
 
 public:
-    zhandle_t *init_handle(watcher_fn fn, const vector<string> &hosts);
+    zhandle_t *init_handle(watcher_fn fn, const std::vector<std::string> &hosts);
     int close_handle();
 
-    int initLocalPath(const string& str);
+    int initLocalPath(const std::string& str);
     
     // 检查zookeeper server中的结构，如果没有初始化则初始化
     void createLayout();
 
     // 同步检测path是否存在
-    int exists(string path);
-    int create(string path, string value, const int mode=ZOO_PERSISTENT);
-    int checkAndCreate(string path, string value, const int mode=ZOO_PERSISTENT);
+    int exists(std::string path);
+    int create(std::string path, std::string value, const int mode=ZOO_PERSISTENT);
+    int checkAndCreate(std::string path, std::string value, const int mode=ZOO_PERSISTENT);
 
-    void setNodeWatcher(const string &path, void *ctx);
-    void setChildrenWatcher(const string &path, void *ctx);
+    void setNodeWatcher(const std::string &path, void *ctx);
+    void setChildrenWatcher(const std::string &path, void *ctx);
 
-    pair<int, vector<string> > ls(const string &path);
-    pair<int, string> get(const string &path);
+    std::pair<int, std::vector<std::string> > ls(const std::string &path);
+    std::pair<int, std::vector<std::pair<std::string, std::string>>> ls2(const std::string &path);
+    std::pair<int, std::string> get(const std::string &path);
 
-    void createSharedNode(string nodeName, const vector<pair<string, string> > &addresses, const vector<string> &ignore);
+    void createSharedNode(std::string nodeName,
+        const std::vector<std::pair<std::string, std::string> > &addresses,
+        const std::vector<std::string> &ignore);
     
     // 拉取和该ip有关的信息
     void getNodesInfo();
     int createRecursively();
 
-    string getNodePath();
+    std::string getNodePath();
 
 private:
     ZkUtils();

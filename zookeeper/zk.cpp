@@ -179,6 +179,23 @@ pair<int, vector<string> > ZkUtils::ls(const string &path)
     return {res, {}};
 }
 
+pair<int, vector<pair<string, string>>> ZkUtils::ls2(const string &path)
+{
+    auto addrs = ls(path);
+    if (addrs.first != 0) {
+        return {addrs.first, {}};
+    }
+    vector<pair<string, string>> res;
+    for (auto nodeName : addrs.second) {
+        auto value = get(path + "/" + nodeName);
+        if (value.first != 0) {
+            return {value.first, {}};
+        }
+        res.push_back({nodeName, value.second});
+    }
+    return {0, res};
+}
+
 pair<int, string> ZkUtils::get(const string &path)
 {
     promise<pair<int, vector<uint8_t>>> *prom = new promise<pair<int, vector<uint8_t>>>();

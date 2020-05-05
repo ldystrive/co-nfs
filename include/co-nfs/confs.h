@@ -26,8 +26,9 @@ public:
     
     // 从zookeeper server上拉取结点信息
     boost::optional<SharedNode> pullNode();
-    boost::optional<std::vector<pair<std::string, std::string>>> pullAddresses();
+    boost::optional<std::vector<std::pair<std::string, std::string>>> pullAddresses();
     boost::optional<std::string> pullIgnore();
+    boost::optional<std::string> pullEventQueue();
 
     // 监控本地文件，并将修改事件发送到zookeeper server
     int watchLocalFiles();
@@ -39,7 +40,7 @@ public:
 
 public:
     std::thread inotifyThread;
-    shared_ptr<ThreadPool> mPool;
+    std::shared_ptr<ThreadPool> mPool;
 
 public:
     SharedNode getNode();
@@ -47,9 +48,10 @@ public:
     void updateNode();
     void updateAddresses();
     void updateIgnore();
+
 private:
     SharedNode mNode;
-    boost::shared_mutex mMutex;
+    boost::shared_mutex mNodeMutex;
 
 private:
     Confs() = delete;

@@ -86,13 +86,13 @@ Confs::Confs(const vector<string> &hosts, const string &localPath, const string 
 
 SharedNode Confs::getNode()
 {
-    boost::shared_lock<boost::shared_mutex> m(mMutex);
+    boost::shared_lock<boost::shared_mutex> m(mNodeMutex);
     return mNode;
 }
 
 void Confs::setNode(SharedNode node)
 {
-    boost::unique_lock<boost::shared_mutex> m(mMutex);
+    boost::unique_lock<boost::shared_mutex> m(mNodeMutex);
     this->mNode = node;
 }
 
@@ -100,7 +100,7 @@ void Confs::updateAddresses()
 {
     auto _addrs = pullAddresses();
     if (_addrs) {
-        boost::unique_lock<boost::shared_mutex> m(mMutex);
+        boost::unique_lock<boost::shared_mutex> m(mNodeMutex);
         this->mNode.addresses = move(*_addrs);
     }
 }
@@ -115,7 +115,7 @@ void Confs::updateIgnore()
         }
         notifier.ignoreFiles(files);
         
-        boost::unique_lock<boost::shared_mutex> m(mMutex);
+        boost::unique_lock<boost::shared_mutex> m(mNodeMutex);
         this->mNode.ignore = move(*_ignore);
     }
 }
