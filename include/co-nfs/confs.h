@@ -35,6 +35,8 @@ public:
     // 设置zookeeper watcher，监控server端变化
     int watchServerInfo();
 
+    void consistencyCheck();
+
 public:
     std::thread inotifyThread;
     shared_ptr<ThreadPool> mPool;

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
@@ -38,29 +39,33 @@ string SharedNode::parseAddr(const string &str)
 EventQueue::EventQueue() {}
 EventQueue::~EventQueue() {}
 
-boost::optional<string> EventQueue::getNextEvent()
+void EventQueue::sortByName()
 {
-    if (empty()) {
+    boost::unique_lock<boost::shared_mutex> m(mMutex);
+    sort(mEvents.begin(), mEvents.end(),
+        [](const pair<string, string> &event1, const pair<string, string> &event2) -> bool
+        {
+            return event1.first < event2.first;
+        });
+}
+
+void EventQueue::setQueue(const vector<pair<string, string>> &events)
+{
+    boost::unique_lock<boost::shared_mutex> m(mMutex);
+    mEvents = move(events);
+}
+
+boost::optional<pair<string, string>> EventQueue::front()
+{
+    boost::shared_lock<boost::shared_mutex> m(mMutex);
+    if (mEvents.empty()) {
         return boost::none;
     }
-    return mEvents.front().second;
+    return mEvents[0];
 }
 
-bool EventQueue::empty() 
+vector<pair<string, string>> EventQueue::getQueue()
 {
-    return mEvents.empty();
-}
-
-void EventQueue::insertEvent(const pair<string, string> &event)
-{
-    auto iter = mEvents.begin();
-    while (iter != mEvents.end() && (*iter).first < event.first) {
-        iter++;
-    }
-    mEvents.insert(iter, event);
-}
-
-void EventQueue::pop()
-{
-    mEvents.pop_front();
+    boost::shared_lock<boost::shared_mutex> m(mMutex);
+    return mEvents;
 }

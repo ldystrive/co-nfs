@@ -10,6 +10,7 @@
 #include <list>
 
 #include <boost/optional.hpp>
+#include <boost/thread/thread.hpp>
 
 class SharedNode {
 public:
@@ -35,14 +36,14 @@ public:
     ~EventQueue();
     EventQueue();
     
-    boost::optional<std::string> getNextEvent();
-    void insertEvent(const std::pair<std::string, std::string> &event);
-    void pop();
-
-    bool empty();
+    boost::optional<std::pair<std::string, std::string>> front();
+    void setQueue(const std::vector<std::pair<std::string, std::string>> &events);
+    std::vector<std::pair<std::string, std::string>> getQueue();
 
 private:
+    void sortByName();
     // sorted by the first string
     // eventid, event
-    std::list<std::pair<std::string, std::string>> mEvents;
+    boost::shared_mutex mMutex;
+    std::vector<std::pair<std::string, std::string>> mEvents;
 };

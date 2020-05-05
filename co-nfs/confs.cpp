@@ -293,3 +293,8 @@ int Confs::watchServerInfo()
 
     return 0;
 }
+
+void Confs::consistencyCheck()
+{
+    
+}
