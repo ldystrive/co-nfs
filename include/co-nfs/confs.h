@@ -9,6 +9,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/optional.hpp>
 
+#include "handle.h"
 #include "sharedNode.h"
 #include "threadPool.h"
 #include "../zookeeper/zk.h"
@@ -44,6 +45,9 @@ public:
 
 public:
     EventQueue eventQueue;
+    EventHandler eventHandler;
+    boost::filesystem::path inFolder;
+    boost::filesystem::path outFolder;
     SharedNode getNode();
     void setNode(SharedNode node);
     void updateNode();
@@ -61,6 +65,4 @@ private:
     Confs& operator=(const Confs&) = delete;
     ZkUtils *zk;
     inotify::InotifyBuilder notifier;
-    boost::filesystem::path inFolder;
-    boost::filesystem::path outFolder;
 };

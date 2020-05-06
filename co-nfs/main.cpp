@@ -17,6 +17,8 @@
 using namespace std;
 namespace bpo = boost::program_options;
 
+// #define DEBUG
+
 void signalHandler(int signum)
 {
     cout << "Interrupt signal (" << signum << ") received.\n" << endl;
@@ -65,6 +67,24 @@ int main(int argc, char *argv[])
         Confs confs(zoo_hosts, localPath, nodeName);
         confs.watchLocalFiles();
         confs.watchServerInfo();
+#ifdef DEBUG
+        using json = nlohmann::json;
+        json event1 = {
+            {"path", "/shareData/a"},
+            {"event", "0"}
+        };
+        json event2 = {
+            {"path", "/shareData/b/a"},
+            {"event", "0"}
+        };
+        json event = {
+            {"ip", "2333"},
+            {"path", "/shareData"},
+            {"event1", event1},
+            {"event2", event2}
+        };
+        confs.eventHandler.solveEvent("test_for_mv_file", event, &confs);
+#endif
         confs.inotifyThread.join();
     }
     catch(const exception &e) {

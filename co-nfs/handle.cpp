@@ -12,8 +12,10 @@
 #include "co-nfs/handle.h"
 #include "co-nfs/utils.h"
 #include "co-nfs/sharedNode.h"
+#include "json/json.hpp"
 
 using namespace std;
+using json = nlohmann::json;
 
 void addresses_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
 {
@@ -48,6 +50,9 @@ void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
         for (auto a : value) {
             cout << a.first << ' ' << a.second << endl;
         }
+        if (!value.empty()){
+            // confs->eventHandler.solveEvent(value[0].first, value[0].second, confs);
+        }
     });
 
 }
@@ -65,4 +70,53 @@ void ignore_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
         SharedNode node = confs->getNode();
         cout << "new ignore:" << node.ignore << endl;
     });
+}
+
+EventHandler::EventHandler() {}
+
+EventHandler::~EventHandler() {}
+
+int EventHandler::solveEvent(string eventId, string event, Confs *confs)
+{
+    solveEvent(eventId, json::parse(event), confs);
+}
+
+int EventHandler::solveEvent(string eventId, json event, Confs *confs)
+{
+    namespace fs = boost::filesystem;
+    string ip = event["ip"];
+    string mountPath = event["path"];
+    
+    if (event.contains("event1") && event.contains("event2")) {
+        string path_from = event["event1"]["path"];
+        string path_to = event["event2"]["path"];
+        if (!fs::exists(path_from)) {
+            cout << "src path: " << path_from << " does not exist." << "\n";
+            return -1;
+        }
+        if (fs::is_directory(path_from)) {
+            try {
+                mutils::copyDir(path_from, path_to);
+                fs::remove_all(path_from);
+            }
+            catch (const exception &e) {
+                cout << e.what() << '\n';
+                return -1;
+            }
+        }
+        else if(fs::is_regular_file(path_from)){
+            try {
+                fs::copy_file(path_from, path_to, fs::copy_option::overwrite_if_exists);
+                fs::remove(path_from);
+            }
+            catch (const exception &e) {
+                cout << e.what() << '\n';
+                return -1;
+            }
+        }
+    }
+    else if (event.contains("event")) {
+
+    }
+    return 0;
 }
