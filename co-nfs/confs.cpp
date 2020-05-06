@@ -187,12 +187,39 @@ boost::optional<SharedNode> Confs::pullNode()
     return node;
 }
 
+bool Confs::isTriggeredByEventHandler(boost::filesystem::path path)
+{
+    auto value = eventQueue.getQueue();
+    if (!value.empty()) {
+        json j = json::parse(value[0].second);
+        vector<boost::filesystem::path> eventPath;
+        if (j.contains("event")) {
+            eventPath.push_back(boost::filesystem::path(string(j["event"]["path"])));
+        }
+        else if (j.contains("event1") && j.contains("event2")) {
+            eventPath.push_back(boost::filesystem::path(string(j["event1"]["path"])));
+            eventPath.push_back(boost::filesystem::path(string(j["event2"]["path"])));
+        }
+        for (auto &p : eventPath) {
+            string str1 = path.string();
+            string str2 = p.string();
+            if (str1.find(str2) != str1.npos) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 int Confs::watchLocalFiles()
 {
     auto handleEvent = [&] (InotifyEvent inotifyEvent) {
         // 判断是否和临时文件夹有关
         if (mutils::isSubdir(inFolder, inotifyEvent.path) || 
             mutils::isSubdir(outFolder, inotifyEvent.path)) {
+            return;
+        }
+        if (isTriggeredByEventHandler(inotifyEvent.path)) {
             return;
         }
         std::cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
@@ -211,6 +238,10 @@ int Confs::watchLocalFiles()
             mutils::isSubdir(outFolder, inotifyEvent1.path) ||
             mutils::isSubdir(inFolder, inotifyEvent2.path)  || 
             mutils::isSubdir(outFolder, inotifyEvent2.path)) {
+            return;
+        }
+        if (isTriggeredByEventHandler(inotifyEvent1.path)
+            || isTriggeredByEventHandler(inotifyEvent2.path)) {
             return;
         }
         json j = {

@@ -70,11 +70,11 @@ int main(int argc, char *argv[])
 #ifdef DEBUG
         using json = nlohmann::json;
         json event1 = {
-            {"path", "/shareData/a"},
+            {"path", "/shareData/a.txt"},
             {"event", "0"}
         };
         json event2 = {
-            {"path", "/shareData/b/a"},
+            {"path", "/shareData/b.txt"},
             {"event", "0"}
         };
         json event = {
