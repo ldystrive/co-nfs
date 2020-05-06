@@ -86,6 +86,9 @@ int EventHandler::solveEvent(string eventId, json event, Confs *confs)
     namespace fs = boost::filesystem;
     string ip = event["ip"];
     string mountPath = event["path"];
+    if (ip == confs->zk->localIp && mountPath == confs->zk->localDir) {
+        return 0;
+    }
     
     if (event.contains("event1") && event.contains("event2")) {
         string path_from = event["event1"]["path"];

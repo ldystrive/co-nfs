@@ -44,6 +44,7 @@ public:
     std::shared_ptr<ThreadPool> mPool;
 
 public:
+    ZkUtils *zk;
     EventQueue eventQueue;
     EventHandler eventHandler;
     boost::filesystem::path inFolder;
@@ -64,6 +65,5 @@ private:
     Confs(const Confs&) = delete;
     Confs& operator=(const Confs&) = delete;
     bool isTriggeredByEventHandler(boost::filesystem::path path);
-    ZkUtils *zk;
     inotify::InotifyBuilder notifier;
 };
