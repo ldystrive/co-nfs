@@ -333,9 +333,8 @@ void Confs::consistencyCheck()
             boost::filesystem::copy_file(path, path + "_copy",
                 boost::filesystem::copy_option::overwrite_if_exists);
         }
-
-
     };
+    
     auto checker = [&](const pair<string, string> &event) -> bool {
 
         json e2 = json::parse(event.second);
