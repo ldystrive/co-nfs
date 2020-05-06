@@ -283,8 +283,14 @@ bool Inotify::hasStopped()
 bool Inotify::isIgnored(std::string file)
 {
     boost::filesystem::path path(file);
-    if (path.has_leaf() && path.leaf().string()[0] == '.') {
-        return true;
+    if (path.has_leaf()) {
+        std::string str = path.leaf().string();
+        if (str.length() > 0 && str[0] == '.') {
+            return true;
+        }
+        if (str.length() > 5 && str.substr(str.length() - 5, 5) == "_copy") {
+            return true;
+        }
     }
     for (unsigned i = 0; i < mOnceIgnoredDirectories.size(); ++i) {
         size_t pos = file.find(mOnceIgnoredDirectories[i]);

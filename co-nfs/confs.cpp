@@ -334,7 +334,7 @@ void Confs::consistencyCheck()
                 boost::filesystem::copy_option::overwrite_if_exists);
         }
     };
-    
+
     auto checker = [&](const pair<string, string> &event) -> bool {
 
         json e2 = json::parse(event.second);
@@ -343,8 +343,8 @@ void Confs::consistencyCheck()
         string p2 = e2["event"]["path"];
         Event v2 = static_cast<Event>(static_cast<uint32_t>(stoul(string(e2["event"]["event"]))));
         
-        // just check regular file
-        if (!boost::filesystem::is_regular_file(boost::filesystem::path(p2))) {
+        // not a directory
+        if (boost::filesystem::is_directory(boost::filesystem::path(p2))) {
             return false;
         }
 
