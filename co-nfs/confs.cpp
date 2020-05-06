@@ -329,8 +329,10 @@ void Confs::consistencyCheck()
         zk->removeRecursively(zkEventPath);
 
         // type = 1, remove event and back up
-        boost::filesystem::copy_file(path, path + "_copy",
-            boost::filesystem::copy_option::overwrite_if_exists);
+        if (type == 1) {
+            boost::filesystem::copy_file(path, path + "_copy",
+                boost::filesystem::copy_option::overwrite_if_exists);
+        }
 
 
     };
