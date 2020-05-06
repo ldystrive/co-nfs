@@ -82,6 +82,17 @@ void future_data_completion_cb(int rc, const char *value, int value_len, const s
 
 }
 
+void future_void_completion_cb(int rc, const void *data)
+{
+    cout << __PRETTY_FUNCTION__ << endl;
+    cout << "error code:" << rc << endl;
+    if (data == NULL) {
+        return;
+    }
+    promise<int> *prom = static_cast<promise<int> *>(const_cast<void *>(data));
+    prom->set_value(rc);
+}
+
 
 void set_watcher_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
 {

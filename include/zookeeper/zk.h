@@ -44,6 +44,9 @@ public:
     int create(std::string path, std::string value, const int mode=ZOO_PERSISTENT);
     int checkAndCreate(std::string path, std::string value, const int mode=ZOO_PERSISTENT);
 
+    int remove(std::string path);
+    int removeRecursively(std::string path);
+
     void setNodeWatcher(const std::string &path, void *ctx);
     void setChildrenWatcher(const std::string &path, void *ctx);
 

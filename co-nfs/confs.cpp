@@ -307,5 +307,91 @@ int Confs::watchServerInfo()
 
 void Confs::consistencyCheck()
 {
-    
+    auto events = eventQueue.getQueue();
+
+    auto handler = [&](const pair<string, string> &event, int type = -1) {
+
+        json e = json::parse(event.second);
+        string eventId = event.first;
+        string path = e["event"]["path"];
+        Event v = static_cast<Event>(static_cast<uint32_t>(stoul(string(e["event"]["event"]))));
+        if (type == -1) {
+            if ((v & Event::create) != Event::none || (v & Event::close_write) != Event::none) {
+                type = 1;
+            }
+            else {
+                type = 0;
+            }
+        }
+
+        // type = {0, 1}, remove event
+        string zkEventPath = zk->getNodePath() + "/events/" + eventId;
+        zk->removeRecursively(zkEventPath);
+
+        // type = 1, remove event and back up
+        boost::filesystem::copy_file(path, path + "_copy",
+            boost::filesystem::copy_option::overwrite_if_exists);
+
+
+    };
+    auto checker = [&](const pair<string, string> &event) -> bool {
+
+        json e2 = json::parse(event.second);
+        string ip2 = e2["ip"];
+        string dirPath2 = e2["path"];
+        string p2 = e2["event"]["path"];
+        Event v2 = static_cast<Event>(static_cast<uint32_t>(stoul(string(e2["event"]["event"]))));
+        
+        // just check regular file
+        if (!boost::filesystem::is_regular_file(boost::filesystem::path(p2))) {
+            return false;
+        }
+
+        // close_write or create
+        if ((v2 & Event::close_write) == Event::none 
+            || (v2 & Event::create) == Event::none
+            || (v2 & Event::remove) == Event::none) {
+            return false;
+        }
+
+        for (const auto &preEvent: events) {
+            if (preEvent.first == event.first) {
+                continue;
+            }
+            json e1 = json::parse(preEvent.second);
+            if (e1["ip"] == ip2 && e1["path"] == dirPath2) {
+                continue;
+            }
+            if (!e1.contains("event")) {
+                continue;
+            }
+            string p1 = e1["event"]["path"];
+            Event v1 = static_cast<Event>(static_cast<uint32_t>(e1["event"]["event"]));
+            if (p1 != p2) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    };
+
+    if (!events.empty()) {
+        auto lastIter = --events.end();
+        string eventId = (*lastIter).first;
+        json event = json::parse((*lastIter).second);
+        if (event["ip"] != zk->localIp || event["path"] != zk->localDir) {
+            return;
+        }
+        if (event.contains("event")) {
+            if (checker(event)) {
+                handler(event);
+            }
+        }
+        else if (event.contains("event1") && event.contains("event2")) {
+            // not do anything.
+        }
+        else {
+            // unknown event.
+        }
+    }
 }

@@ -2,6 +2,8 @@
 #include <mutex>
 #include <thread>
 #include <future>
+#include <stack>
+#include <queue>
 #include <functional>
 #include <utility>
 
@@ -218,4 +220,48 @@ void ZkUtils::setNodeWatcher(const string &path, void *ctx)
 void ZkUtils::setChildrenWatcher(const string &path, void *ctx)
 {
     zoo_awget_children(this->zh, path.c_str(), set_watcher_cb, ctx, future_strings_completion_cb, NULL);
+}
+
+int ZkUtils::remove(string path)
+{
+    promise<int> *prom = new promise<int>();
+    future<int> future = prom->get_future();
+    int res = zoo_adelete(this->zh, path.c_str(), -1, future_void_completion_cb, prom);
+    if (res == ZOK) {
+        int v = future.get();
+        delete prom;
+        return v;
+    }
+    delete prom;
+    return res;
+}
+
+int ZkUtils::removeRecursively(string path)
+{
+    cout << "recursively remove path: " << path << endl;
+    queue<string> pathQueue;
+    stack<string> pathStack;
+    pathQueue.push(path);
+    while (!pathQueue.empty()) {
+        string path1 = pathQueue.front();
+        cout << "found path: " << path1 << endl; 
+        pathQueue.pop();
+        pathStack.push(path1);
+        auto res = ls(path1);
+        if (res.first != 0) {
+            return res.first;
+        }
+        for (auto subDir : res.second) {
+            pathQueue.push(path1 + "/" + subDir);
+        }
+    }
+    cout << "start remove" << endl;
+    while (!pathStack.empty()) {
+        string path1 = pathStack.top();
+        pathStack.pop();
+        int res = remove(path1);
+        if (res != 0) {
+            continue;
+        }
+    }
 }

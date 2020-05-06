@@ -41,7 +41,7 @@ EventQueue::~EventQueue() {}
 
 void EventQueue::sortByName()
 {
-    boost::unique_lock<boost::shared_mutex> m(mMutex);
+    // boost::unique_lock<boost::shared_mutex> m(mMutex);
     sort(mEvents.begin(), mEvents.end(),
         [](const pair<string, string> &event1, const pair<string, string> &event2) -> bool
         {
@@ -53,6 +53,7 @@ void EventQueue::setQueue(const vector<pair<string, string>> &events)
 {
     boost::unique_lock<boost::shared_mutex> m(mMutex);
     mEvents = move(events);
+    sortByName();
 }
 
 boost::optional<pair<string, string>> EventQueue::front()

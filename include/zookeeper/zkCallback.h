@@ -23,3 +23,4 @@ void future_data_completion_cb(int rc, const char *value, int value_len, const s
 // 设置watcher的回调函数
 void set_watcher_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx);
 
+void future_void_completion_cb(int rc, const void *data);
