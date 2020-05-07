@@ -17,7 +17,7 @@
 using namespace std;
 namespace bpo = boost::program_options;
 
-// #define DEBUG
+#define DEBUG
 
 void signalHandler(int signum)
 {
@@ -83,7 +83,16 @@ int main(int argc, char *argv[])
             {"event1", event1},
             {"event2", event2}
         };
-        confs.eventHandler.solveEvent("test_for_mv_file", event, &confs);
+        json eventS = {
+            {"path", "/shareData/test_create_dir"},
+            {"event", to_string(static_cast<uint32_t>(inotify::Event::remove | inotify::Event::is_dir))}
+        };
+        json eventS1 = {
+            {"ip", "2333"},
+            {"path", "/shareData"},
+            {"event", eventS},
+        };
+        confs.eventHandler.solveEvent("test_for_mv_file", eventS1, &confs);
 #endif
         confs.inotifyThread.join();
     }
