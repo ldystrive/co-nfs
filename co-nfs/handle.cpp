@@ -6,12 +6,14 @@
 #include <string>
 
 #include <boost/filesystem.hpp>
+#include <boost/asio.hpp>
 
 #include "zookeeper/zk.h"
 #include "zookeeper/zkCallback.h"
 #include "co-nfs/confs.h"
 #include "co-nfs/handle.h"
 #include "co-nfs/utils.h"
+#include "co-nfs/fileTransfer.h"
 #include "co-nfs/sharedNode.h"
 #include "json/json.hpp"
 #include "inotify/inotifyBuilder.h"
@@ -34,7 +36,7 @@ void addresses_cb(zhandle_t *zh, int type, int state, const char *path, void *ct
         SharedNode node = confs->getNode();
         cout << "new addresses:" << endl;
         for (auto a : node.addresses) {
-            cout << a.first << ' ' << a.second << endl;
+            cout << get<0>(a) << ' ' << get<1>(a) << ' ' << get<2>(a) << endl;
         }
     });
 }
@@ -55,7 +57,10 @@ void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
             cout << a.first << ' ' << a.second << endl;
         }
         if (!value.empty()){
-            // confs->eventHandler.solveEvent(value[0].first, value[0].second, confs);
+//            int eventState = confs->getEventState();
+//            if ()
+
+            confs->eventHandler.solveEvent(value[0].first, value[0].second, confs);
         }
     });
 
@@ -114,7 +119,28 @@ int EventHandler::handleCreate(string path, Confs *confs, Event event)
 
 int EventHandler::handleCloseWrite(string path, Confs *confs, Event event)
 {
-
+    auto handleFinished = [&](string addr) {
+        cout << "file transfer " << addr << "finished." << endl;
+    };
+    SharedNode node = confs->getNode();
+    auto addrs = node.addresses;
+    for (const auto &addr : addrs) {
+        string ip = get<0>(addr);
+        string port = get<1>(addr);
+        string dir = get<2>(addr);
+        string path_to = dir + path.substr(confs->zk->localDir.size(), path.size());
+        if (ip == confs->zk->localIp && port == confs->getPort()) {
+            continue;
+        }
+        try {
+            boost::asio::io_service io_service;
+            AsyncTcpClient client(io_service, ip, port, path, path_to, handleFinished);
+            io_service.run();
+        }
+        catch (const exception &e) {
+            cerr << "Exception in " << __PRETTY_FUNCTION__ << ": " << e.what() << "\n";
+        }
+    }
 }
 
 int EventHandler::handleRemove(string path, Confs *confs, Event event)
@@ -167,30 +193,35 @@ int EventHandler::solveEvent(string eventId, json event, Confs *confs)
 {
     string ip = event["ip"];
     string mountPath = event["path"];
-    if (ip == confs->zk->localIp && mountPath == confs->zk->localDir) {
+    string port = event["port"];
+    if (ip == confs->zk->localIp && port == confs->getPort()) {
+        if (event.contains("event")) {
+            string path = event["event"]["path"];
+            Event e = static_cast<Event>(static_cast<uint32_t>(stoul(string(event["event"]["event"]))));
+            if ((e & Event::close_write) != Event::none) {
+                return handleCloseWrite(path, confs, e);
+            }
+        }
         return 0;
     }
     int res = 0;
     
     if (event.contains("event1") && event.contains("event2")) {
-        string path_from = event["event1"]["path"];
-        string path_to = event["event2"]["path"];
+        string path_from = confs->convertPath(event["event1"]["path"], mountPath);
+        string path_to = confs->convertPath(event["event2"]["path"], mountPath);
         res = handleMove(path_from, path_to, confs);
 
     }
     else if (event.contains("event")) {
-        string path = event["event"]["path"];
+        string path = confs->convertPath(event["event"]["path"], mountPath);
+
         Event e = static_cast<Event>(static_cast<uint32_t>(stoul(string(event["event"]["event"]))));
         if ((e & Event::create) != Event::none) {
             res = handleCreate(path, confs, e);
         }
-        else if ((e & Event::close_write) != Event::none) {
-            res = handleCloseWrite(path, confs, e);
-        }
         else if ((e & Event::remove) != Event::none) {
             res = handleRemove(path, confs, e);
         }
-        
     }
     return res;
 }

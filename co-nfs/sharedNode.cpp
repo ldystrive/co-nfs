@@ -14,27 +14,20 @@ SharedNode::~SharedNode() {}
 
 SharedNode::SharedNode() {}
 
-SharedNode::SharedNode(const string &name, const string &ignore, const vector<pair<string, string>> &addrs)
-    : nodeName(name), ignore(ignore)
+SharedNode::SharedNode(const string &name, const string &ignore, const vector<tuple<string, string, string>> &addrs)
+    : nodeName(name), ignore(ignore), addresses(addrs)
 {
-    addresses.clear();
-    for (const auto &addrp : addrs) {
-        string addr = addrp.first;
-        string path = addrp.second;
-        
-        addr = parseAddr(addr);
-        addresses.push_back({addr, path});
-    }
 }
 
-string SharedNode::parseAddr(const string &str)
+pair<string, string> SharedNode::parseAddr(const string &str)
 {
     auto pos = str.find("_");
     if (pos == str.npos) {
-        return str;
+        return {str, ""};
     }
-    return str.substr(0, pos);
+    return {str.substr(0, pos), str.substr(pos+1, str.size())};
 }
+
 
 EventQueue::EventQueue() {}
 EventQueue::~EventQueue() {}

@@ -45,7 +45,7 @@ string ZkUtils::getNodePath()
     return string("/co_nfs/shared_nodes/") + nodeName;
 }
 
-zhandle_t *ZkUtils::init_handle(watcher_fn fn, const vector<string> &hosts)
+zhandle_t *ZkUtils::init_handle(watcher_fn fn, const vector<string> &hosts, string port)
 {
     string mhost;
     for (const auto &host : hosts) {
@@ -55,6 +55,7 @@ zhandle_t *ZkUtils::init_handle(watcher_fn fn, const vector<string> &hosts)
         else
             mhost += string(",") + host;
     }
+    this->port = port;
 
     promise<int> *prom = new promise<int>();
     future<int> future = prom->get_future();
@@ -161,7 +162,7 @@ void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string
     for (const auto &address : addresses) {
         string ip = address.first;
         string mount = address.second;
-        this->checkAndCreate(prefix + "/addresses/" + ip + "_" + to_string(stringHash(mount)),
+        this->checkAndCreate(prefix + "/addresses/" + ip + "_" + port,
             mount, ZOO_EPHEMERAL);
     }
     this->checkAndCreate(prefix + "/events", "");

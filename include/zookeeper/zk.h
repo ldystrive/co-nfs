@@ -31,7 +31,7 @@ public:
     std::string nodeName;
 
 public:
-    zhandle_t *init_handle(watcher_fn fn, const std::vector<std::string> &hosts);
+    zhandle_t *init_handle(watcher_fn fn, const std::vector<std::string> &hosts, std::string port);
     int close_handle();
 
     int initLocalPath(const std::string& str);
@@ -69,6 +69,7 @@ private:
     ~ZkUtils();
     ZkUtils(const ZkUtils&);
     const ZkUtils &operator=(const ZkUtils &);
+    std::string port;
 
 private:
     static ZkUtils *m_sInstance;

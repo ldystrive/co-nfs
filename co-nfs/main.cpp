@@ -17,7 +17,7 @@
 using namespace std;
 namespace bpo = boost::program_options;
 
-#define DEBUG
+// #define DEBUG
 
 void signalHandler(int signum)
 {
@@ -36,10 +36,12 @@ int main(int argc, char *argv[])
     string localPath;
     vector<string> zoo_hosts;
     string nodeName;
+    string port;
 
     opt.add_options()
         ("localIp,l", bpo::value<string>(&localPath)->default_value("192.168.137.132/shareData", "local path"))
         ("server,s", bpo::value<vector<string> >()->multitoken(), "zoo server addresses")
+        ("port,p", bpo::value<string>(&port)->default_value("5566"), "local port")
         ("name,n", bpo::value<string>(&nodeName)->default_value("node1"), "node name");
     
     bpo::variables_map vm;
@@ -64,7 +66,7 @@ int main(int argc, char *argv[])
 
     // init(zoo_hosts, localPath, nodeName);
     try {
-        Confs confs(zoo_hosts, localPath, nodeName);
+        Confs confs(zoo_hosts, localPath, nodeName, port);
         confs.watchLocalFiles();
         confs.watchServerInfo();
 #ifdef DEBUG
@@ -95,6 +97,7 @@ int main(int argc, char *argv[])
         confs.eventHandler.solveEvent("test_for_mv_file", eventS1, &confs);
 #endif
         confs.inotifyThread.join();
+        confs.tcpServerThread.join();
     }
     catch(const exception &e) {
         cerr << e.what() << endl;

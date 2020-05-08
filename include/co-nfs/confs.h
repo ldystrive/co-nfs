@@ -1,9 +1,11 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <mutex>
 
 #include <boost/thread/thread.hpp>
@@ -12,6 +14,7 @@
 #include "handle.h"
 #include "sharedNode.h"
 #include "threadPool.h"
+#include "fileTransfer.h"
 #include "../zookeeper/zk.h"
 #include "../inotify/inotifyBuilder.h"
 
@@ -23,11 +26,12 @@ public:
     ~Confs();
     Confs(const std::vector<std::string> &hosts,
         const std::string &localPath,
-        const std::string &nodeName);
+        const std::string &nodeName,
+        const std::string &port);
     
     // 从zookeeper server上拉取结点信息
     boost::optional<SharedNode> pullNode();
-    boost::optional<std::vector<std::pair<std::string, std::string>>> pullAddresses();
+    boost::optional<std::vector<std::tuple<std::string, std::string, std::string>>> pullAddresses();
     boost::optional<std::string> pullIgnore();
     boost::optional<std::vector<std::pair<std::string, std::string>>> pullEventQueue();
 
@@ -39,8 +43,11 @@ public:
 
     void consistencyCheck();
 
+    std::string convertPath(std::string rawPath, std::string baseDir);
+
 public:
     std::thread inotifyThread;
+    std::thread tcpServerThread;
     std::shared_ptr<ThreadPool> mPool;
 
 public:
@@ -55,6 +62,7 @@ public:
     void updateAddresses();
     void updateIgnore();
     void updateEventQueue();
+    std::string getPort();
 
 private:
     SharedNode mNode;
@@ -66,4 +74,6 @@ private:
     Confs& operator=(const Confs&) = delete;
     bool isTriggeredByEventHandler(boost::filesystem::path path);
     inotify::InotifyBuilder notifier;
+    const std::string port;
+    std::shared_ptr<AsyncTcpServer> fileTransfer;
 };

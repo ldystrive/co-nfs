@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 #include <list>
+#include <tuple>
 
 #include <boost/optional.hpp>
 #include <boost/thread/thread.hpp>
@@ -18,16 +19,15 @@ public:
     SharedNode();
     SharedNode(const std::string &name,
         const std::string &ignore,
-        const std::vector<std::pair<std::string, std::string>> &addrs);
+        const std::vector<std::tuple<std::string, std::string, std::string>> &addrs);
     
-    // str likes: 192.168.137.132_1567464848020645536, ip_hash(mount path)
-    static std::string parseAddr(const std::string &str);
+    static std::pair<std::string, std::string> parseAddr(const std::string &str);
 
 public:
     std::string nodeName;
     std::string ignore;
-    // pair<string, string>: ip & mount path
-    std::vector<std::pair<std::string, std::string> > addresses;
+    // tuple<string, string, string>: ip port and mount path
+    std::vector<std::tuple<std::string, std::string, std::string> > addresses;
     
 };
 
@@ -46,4 +46,17 @@ private:
     // eventid, event
     boost::shared_mutex mMutex;
     std::vector<std::pair<std::string, std::string>> mEvents;
+};
+
+enum class EventState : uint32_t {
+    waiting,
+    ready,
+    runningByMaster,
+    runningBySlave,
+    finished
+};
+
+enum class runnningState : uint32_t {
+    running,
+    finished
 };

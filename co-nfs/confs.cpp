@@ -6,6 +6,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "zookeeper/zk.h"
 #include "zookeeper/zkCallback.h"
@@ -57,11 +58,13 @@ Confs::~Confs()
     notifier.stop();
 }
 
-Confs::Confs(const vector<string> &hosts, const string &localPath, const string &nodeName)
-: notifier(BuildInotify()), mPool(make_shared<ThreadPool>(THREADS_NUM))
+Confs::Confs(const vector<string> &hosts, const string &localPath, const string &nodeName, const string &port)
+    : notifier(BuildInotify())
+    , mPool(make_shared<ThreadPool>(THREADS_NUM))
+    , port(port)
 {
     zk = ZkUtils::GetInstance();
-    zhandle_t *zh = zk->init_handle(zk_init_cb, hosts);
+    zhandle_t *zh = zk->init_handle(zk_init_cb, hosts, port);
     assert(zh != NULL);
 
     zk->nodeName = nodeName;
@@ -82,6 +85,20 @@ Confs::Confs(const vector<string> &hosts, const string &localPath, const string 
         throw invalid_argument("failed to pull node info.");
     }
     mNode = *nodePtr;
+    
+    auto handleFinished = [&](string str) {
+        cout << str << "finished." << endl;
+    };
+
+    tcpServerThread = thread([&]() {
+        fileTransfer = make_shared<AsyncTcpServer>(boost::lexical_cast<unsigned int>(port), handleFinished);
+    });
+
+}
+
+string Confs::getPort()
+{
+    return port;
 }
 
 SharedNode Confs::getNode()
@@ -136,7 +153,7 @@ void Confs::updateEventQueue()
     }
 }
 
-boost::optional<vector<pair<string, string>>> Confs::pullAddresses()
+boost::optional<vector<tuple<string, string, string>>> Confs::pullAddresses()
 {
     string path = zk->getNodePath() + "/addresses";
     auto value = zk->ls2(path);
@@ -145,9 +162,10 @@ boost::optional<vector<pair<string, string>>> Confs::pullAddresses()
         return boost::none;
     }
     
-    auto &res = value.second;
-    for (auto &v : res) {
-        v.first = SharedNode::parseAddr(v.first);
+    vector<tuple<string, string, string>> res = {};
+    for (auto &v : value.second) {
+        auto addr = SharedNode::parseAddr(v.first);
+        res.push_back(make_tuple(addr.first, addr.second, v.second));
     }
     
     return res;
@@ -226,6 +244,7 @@ int Confs::watchLocalFiles()
             " was triggered." << endl;
         json j = {
             {"ip", zk->localIp},
+            {"port", port},
             {"path", zk->localDir},
             {"event", inotifyEvent.toJson()}
         };
@@ -246,6 +265,7 @@ int Confs::watchLocalFiles()
         }
         json j = {
             {"ip", zk->localIp},
+            {"port", port},
             {"path", zk->localDir},
             {"event1", inotifyEvent1.toJson()},
             {"event2", inotifyEvent2.toJson()}
@@ -426,4 +446,9 @@ void Confs::consistencyCheck()
             // unknown event.
         }
     }
+}
+
+string Confs::convertPath(string rawPath, string baseDir)
+{
+    return this->zk->localDir + rawPath.substr(baseDir.length(), rawPath.size());
 }
