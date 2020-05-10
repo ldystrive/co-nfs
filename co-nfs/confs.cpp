@@ -62,6 +62,7 @@ Confs::Confs(const vector<string> &hosts, const string &localPath, const string 
     : notifier(BuildInotify())
     , mPool(make_shared<ThreadPool>(THREADS_NUM))
     , port(port)
+    , mHandlingEvent(false)
 {
     zk = ZkUtils::GetInstance();
     zhandle_t *zh = zk->init_handle(zk_init_cb, hosts, port);
@@ -86,14 +87,16 @@ Confs::Confs(const vector<string> &hosts, const string &localPath, const string 
     }
     mNode = *nodePtr;
     
-    auto handleFinished = [&](string str) {
-        cout << str << "finished." << endl;
+    auto handleFinished = [this]() {
+        cout << "finished." << endl;
+        this->eventHandler.receivedFile(this);
     };
-
-    tcpServerThread = thread([&]() {
-        fileTransfer = make_shared<AsyncTcpServer>(boost::lexical_cast<unsigned int>(port), handleFinished);
+    auto beforeSaveFile = [this](string path) {
+        this->pushLocalEvent(path);
+    };
+    tcpServerThread = thread([=]() {
+        fileTransfer = make_shared<AsyncTcpServer>(boost::lexical_cast<unsigned int>(port), handleFinished, beforeSaveFile);
     });
-
 }
 
 string Confs::getPort()
@@ -208,6 +211,7 @@ boost::optional<SharedNode> Confs::pullNode()
 bool Confs::isTriggeredByEventHandler(boost::filesystem::path path)
 {
     auto value = eventQueue.getQueue();
+    cout << "EMPTY" << endl;
     if (!value.empty()) {
         json j = json::parse(value[0].second);
         vector<boost::filesystem::path> eventPath;
@@ -222,8 +226,29 @@ bool Confs::isTriggeredByEventHandler(boost::filesystem::path path)
             string str1 = path.string();
             string str2 = p.string();
             if (str1.find(str2) != str1.npos) {
+                cout << "event path:" << str1 << " " << str2 << endl;
                 return true;
             }
+        }
+    }
+    return false;
+}
+
+bool Confs::isIgnoredPath(boost::filesystem::path path)
+{
+    if (mutils::isSubdir(inFolder, path) || 
+        mutils::isSubdir(outFolder, path) ||
+        checkLocalEvent(path)) {
+        return true;
+    }
+    if (path.has_leaf()) {
+        string leaf = path.leaf().string();
+        if (leaf.length() == 0) return false;
+        if (leaf == "4913" || leaf[leaf.length() - 1] == '~' || leaf[0] == '.') {
+            return true;
+        }
+        if (leaf.length() >= 5 && leaf.substr(leaf.length() - 5, leaf.length()) == "_copy") {
+            return true;
         }
     }
     return false;
@@ -233,11 +258,7 @@ int Confs::watchLocalFiles()
 {
     auto handleEvent = [&] (InotifyEvent inotifyEvent) {
         // 判断是否和临时文件夹有关
-        if (mutils::isSubdir(inFolder, inotifyEvent.path) || 
-            mutils::isSubdir(outFolder, inotifyEvent.path)) {
-            return;
-        }
-        if (isTriggeredByEventHandler(inotifyEvent.path)) {
+        if (isIgnoredPath(inotifyEvent.path)) {
             return;
         }
         std::cout << "Event " << inotifyEvent.event << " on " << inotifyEvent.path << 
@@ -253,14 +274,7 @@ int Confs::watchLocalFiles()
 
     auto handleMoveEvent = [&] (InotifyEvent inotifyEvent1, InotifyEvent inotifyEvent2) {
         // 判断是否和临时文件夹有关
-        if (mutils::isSubdir(inFolder, inotifyEvent1.path)  || 
-            mutils::isSubdir(outFolder, inotifyEvent1.path) ||
-            mutils::isSubdir(inFolder, inotifyEvent2.path)  || 
-            mutils::isSubdir(outFolder, inotifyEvent2.path)) {
-            return;
-        }
-        if (isTriggeredByEventHandler(inotifyEvent1.path)
-            || isTriggeredByEventHandler(inotifyEvent2.path)) {
+        if (isIgnoredPath(inotifyEvent1.path) || isIgnoredPath(inotifyEvent2.path)) {
             return;
         }
         json j = {
@@ -451,4 +465,70 @@ void Confs::consistencyCheck()
 string Confs::convertPath(string rawPath, string baseDir)
 {
     return this->zk->localDir + rawPath.substr(baseDir.length(), rawPath.size());
+}
+
+bool Confs::tryStartEvent(string id)
+{
+    boost::unique_lock<boost::shared_mutex> m(mEventMutex);
+    if (mHandlingEvent || id == mHandlingId) return false;
+    mHandlingId = id;
+    return mHandlingEvent = true;
+}
+
+void Confs::stopEvent()
+{
+    boost::unique_lock<boost::shared_mutex> m(mEventMutex);
+    mHandlingEvent = false;
+}
+
+bool Confs::isLocalEvent(const string &event)
+{
+    return isLocalEvent(json::parse(event));
+}
+
+bool Confs::isLocalEvent(const json &event)
+{
+    return isLocalEvent(event["ip"], event["port"]);
+}
+
+bool Confs::isLocalEvent(string ip, string port)
+{
+    return ip == zk->localIp && port == this->port;
+}
+
+bool Confs::checkLocalEvent(boost::filesystem::path path)
+{
+    return checkLocalEvent(path.string());
+}
+
+bool Confs::checkLocalEvent(string path)
+{
+    boost::unique_lock<boost::shared_mutex> m(localEventsMutex);
+    auto now = chrono::steady_clock::now();
+    auto timeout = chrono::milliseconds(2000);
+    cout << "!!!!!!!!!eventsTriggeredByThis empty: " << (eventsTriggeredByThis.begin() == eventsTriggeredByThis.end()) << endl;
+    for (auto iter = eventsTriggeredByThis.begin(); iter != eventsTriggeredByThis.end();) {
+        auto int_ms = chrono::duration_cast<chrono::milliseconds>(now - iter->second);
+        cout << "!!!!!!!!!!CHECK " << iter->first << " " << path << " " << int_ms.count() << endl;
+        if (int_ms > timeout) {
+            iter = eventsTriggeredByThis.erase(iter);
+        }
+        else if (iter->first == path) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Confs::pushLocalEvent(string e)
+{
+    boost::unique_lock<boost::shared_mutex> m(localEventsMutex);
+    auto n = chrono::steady_clock::now();
+    eventsTriggeredByThis.push_back({e, n});
+}
+
+string Confs::getHandlingId()
+{
+    boost::shared_lock<boost::shared_mutex> m(mEventMutex);
+    return mHandlingId;
 }

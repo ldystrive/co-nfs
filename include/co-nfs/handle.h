@@ -32,6 +32,11 @@ public:
     int solveEvent(std::string eventId, nlohmann::json event, Confs *confs);
     int finishedEventId(std::string eventId);
 
+    void checkEventFinished(Confs *confs);
+    void receivedFile(Confs *confs);
+
+    std::string statePath;
+
 private:
     volatile bool mRunning;
     boost::shared_mutex mMutex;

@@ -56,7 +56,8 @@ enum class EventState : uint32_t {
     finished
 };
 
-enum class runnningState : uint32_t {
+enum class RunnningState : uint32_t {
+    ready,
     running,
     finished
 };

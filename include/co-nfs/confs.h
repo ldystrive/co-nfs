@@ -7,6 +7,8 @@
 #include <thread>
 #include <tuple>
 #include <mutex>
+#include <map>
+#include <list>
 
 #include <boost/thread/thread.hpp>
 #include <boost/optional.hpp>
@@ -15,10 +17,11 @@
 #include "sharedNode.h"
 #include "threadPool.h"
 #include "fileTransfer.h"
+#include "../json/json.hpp"
 #include "../zookeeper/zk.h"
 #include "../inotify/inotifyBuilder.h"
 
-const size_t THREADS_NUM = 4;
+const size_t THREADS_NUM = 5;
 // #define CHECK_NFS_MOUNT
 
 class Confs {
@@ -35,6 +38,8 @@ public:
     boost::optional<std::string> pullIgnore();
     boost::optional<std::vector<std::pair<std::string, std::string>>> pullEventQueue();
 
+    bool isIgnoredPath(boost::filesystem::path path);
+
     // 监控本地文件，并将修改事件发送到zookeeper server
     int watchLocalFiles();
 
@@ -44,6 +49,19 @@ public:
     void consistencyCheck();
 
     std::string convertPath(std::string rawPath, std::string baseDir);
+
+    bool tryStartEvent(std::string id);
+    void stopEvent();
+
+    bool isLocalEvent(const std::string &event);
+    bool isLocalEvent(const nlohmann::json &event);
+    bool isLocalEvent(std::string ip, std::string port);
+
+    bool checkLocalEvent(std::string path);
+    bool checkLocalEvent(boost::filesystem::path path);
+    void pushLocalEvent(std::string e);
+
+    std::string getHandlingId();
 
 public:
     std::thread inotifyThread;
@@ -56,6 +74,8 @@ public:
     EventHandler eventHandler;
     boost::filesystem::path inFolder;
     boost::filesystem::path outFolder;
+    inotify::InotifyBuilder notifier;
+    std::list<std::pair<std::string, std::chrono::time_point<std::chrono::steady_clock>>> eventsTriggeredByThis;
     SharedNode getNode();
     void setNode(SharedNode node);
     void updateNode();
@@ -66,14 +86,17 @@ public:
 
 private:
     SharedNode mNode;
+    std::atomic<bool> mHandlingEvent;
+    std::string mHandlingId;
+    boost::shared_mutex mEventMutex;
     boost::shared_mutex mNodeMutex;
+    boost::shared_mutex localEventsMutex;
 
 private:
     Confs() = delete;
     Confs(const Confs&) = delete;
     Confs& operator=(const Confs&) = delete;
     bool isTriggeredByEventHandler(boost::filesystem::path path);
-    inotify::InotifyBuilder notifier;
     const std::string port;
     std::shared_ptr<AsyncTcpServer> fileTransfer;
 };

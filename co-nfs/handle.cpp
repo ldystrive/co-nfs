@@ -18,6 +18,10 @@
 #include "json/json.hpp"
 #include "inotify/inotifyBuilder.h"
 
+#define RESET   "\033[0m"
+#define RED     "\033[31m"      /* Red */
+#define GREEN   "\033[32m"      /* Green */
+
 using namespace std;
 using namespace inotify;
 using json = nlohmann::json;
@@ -41,6 +45,42 @@ void addresses_cb(zhandle_t *zh, int type, int state, const char *path, void *ct
     });
 }
 
+void EventHandler::checkEventFinished(Confs *confs)
+{
+    int pullTimes = 50;
+    int timeout = 200;
+    auto id = confs->getHandlingId();
+    while (--pullTimes) {
+        cout << GREEN  << pullTimes  << statePath << RESET << endl;
+        auto v = confs->zk->ls(statePath);
+        cout << RED << v.first << " " << v.second.size() << RESET << endl;
+        if (v.second.size() == 0) {
+            break;
+        }
+        this_thread::sleep_for(chrono::milliseconds(timeout));
+    }
+    string eventsPath = confs->zk->getNodePath() + "/events/" + id;
+    cout << "Remove: " << eventsPath << endl;
+    confs->zk->removeRecursively(statePath);
+    confs->zk->remove(eventsPath);
+    if (!pullTimes) {
+        cout << "Timeout. not all clients finished" << endl;
+    }
+}
+
+void EventHandler::receivedFile(Confs *confs)
+{
+    string path = confs->zk->getNodePath() + "/eventState/" + confs->getHandlingId();
+    string subPath = path + "/" + confs->zk->localIp + "_" + confs->getPort();
+    cout << GREEN << "received file" << " state path:" << subPath << " " << confs->zk->exists(subPath) << RESET << endl;
+    // this_thread::sleep_for(chrono::minutes(600));
+    while (confs->zk->exists(subPath) != ZOK) { 
+        this_thread::sleep_for(chrono::milliseconds(200));
+    }
+    confs->stopEvent();
+    confs->zk->remove(subPath);
+}
+
 void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
 {
     cout << __PRETTY_FUNCTION__ << endl;
@@ -56,14 +96,46 @@ void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
         for (auto a : value) {
             cout << a.first << ' ' << a.second << endl;
         }
-        if (!value.empty()){
-//            int eventState = confs->getEventState();
-//            if ()
-
-            confs->eventHandler.solveEvent(value[0].first, value[0].second, confs);
+        if (!value.empty() && confs->tryStartEvent(value[0].first)){
+            cout << RED << "Start to solve event:" << value[0].first  << RESET << endl;
+            string path = confs->zk->getNodePath() + "/eventState/" + value[0].first;
+            confs->eventHandler.statePath = path;
+            int64_t ttl = 2 * 60 * 1000;
+            json event = json::parse(value[0].second);
+            if (confs->isLocalEvent(event)) {
+                string v = "";
+                cout << RED << "path:" << path << RESET << endl;
+                zoo_acreate(confs->zk->zh, path.c_str(), v.c_str(), v.length(),
+                    &ZOO_OPEN_ACL_UNSAFE, ZOO_PERSISTENT, future_string_completion_cb, NULL);
+                auto node = confs->getNode();
+                for (const auto &addr : node.addresses) {
+                    string ip = get<0>(addr);
+                    string port = get<1>(addr);
+                    if (confs->isLocalEvent(ip, port)) continue;
+                    string subPath = path + "/" + ip + "_" + port;
+                    cout << RED << "subPath:" << subPath << RESET << endl;
+                    zoo_acreate(confs->zk->zh, subPath.c_str(), "", 0,
+                        &ZOO_OPEN_ACL_UNSAFE, ZOO_EPHEMERAL, future_string_completion_cb, NULL);
+                }
+            }
+            confs->eventHandler.solveEvent(value[0].first, json::parse(value[0].second), confs);
+            if (confs->isLocalEvent(event)) {
+                cout << RED << "check" << RESET << endl;
+                confs->eventHandler.checkEventFinished(confs);
+                cout << RED << "check finished" << RESET << endl;
+                confs->stopEvent();
+            }
+            else if (event.contains("event")) {
+                Event e = static_cast<Event>(static_cast<uint32_t>(stoul(string(event["event"]["event"]))));
+                if ((e & Event::close_write) == Event::none) {
+                    confs->eventHandler.receivedFile(confs);
+                }
+            }
+            else {
+                confs->eventHandler.receivedFile(confs);
+            }
         }
     });
-
 }
 
 void ignore_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
@@ -104,7 +176,8 @@ int EventHandler::handleCreate(string path, Confs *confs, Event event)
         }
         else {
             // create file
-            fs::create_directories(fs::path(path).parent_path());
+            // fs::create_directories(fs::path(path).parent_path());
+            confs->notifier.ignoreFileOnce(fs::path(path));
             ofstream fileStream(path);
             fileStream.close();
         }
@@ -119,27 +192,62 @@ int EventHandler::handleCreate(string path, Confs *confs, Event event)
 
 int EventHandler::handleCloseWrite(string path, Confs *confs, Event event)
 {
-    auto handleFinished = [&](string addr) {
-        cout << "file transfer " << addr << "finished." << endl;
+    auto handleFinished = [=]() {
+        /*
+        auto node = confs->eventQueue.front();
+        if (node) {
+            string eventId = node->first;
+            string statePath = confs->zk->getNodePath() + "/eventState/" + confs->zk->localIp + "_" + confs->zk->localDir;
+            confs->zk->remove(statePath);
+        }
+        */
     };
     SharedNode node = confs->getNode();
-    auto addrs = node.addresses;
-    for (const auto &addr : addrs) {
-        string ip = get<0>(addr);
-        string port = get<1>(addr);
-        string dir = get<2>(addr);
+    int nodeNum = node.addresses.size();
+
+    vector<promise<int> *> promises(nodeNum);
+    vector<future<int> > futures(nodeNum);
+
+    for (int i = 0; i < nodeNum; i++) {
+        promises[i] = new promise<int>();
+        futures[i] = promises[i]->get_future();
+    }
+    vector<boost::asio::io_service> io_service(nodeNum);
+    for (int i = 0; i < nodeNum; i++) {
+        string ip = get<0>(node.addresses[i]);
+        string port = get<1>(node.addresses[i]);
+        string dir = get<2>(node.addresses[i]);
         string path_to = dir + path.substr(confs->zk->localDir.size(), path.size());
         if (ip == confs->zk->localIp && port == confs->getPort()) {
+            promises[i]->set_value(0);
             continue;
         }
-        try {
-            boost::asio::io_service io_service;
-            AsyncTcpClient client(io_service, ip, port, path, path_to, handleFinished);
-            io_service.run();
+        confs->mPool->enqueue([=, &io_service, &promises](){
+            try {
+                cout << RED << path_to << RESET << endl;
+                AsyncTcpClient client(io_service[i], ip, port, path, path_to, handleFinished, promises[i]);
+                io_service[i].run();
+            }
+            catch (const exception &e) {
+                cerr << "Exception in " << __PRETTY_FUNCTION__ << ": " << e.what() << "\n";
+                // promises[i]->set_value(-1);
+            }
+        });
+    }
+
+    for (int i = 0; i < nodeNum; i++) {
+        int res = futures[i].get();
+        io_service[i].stop();
+        if (res != 0) {
+            string ip = get<0>(node.addresses[i]);
+            string port = get<1>(node.addresses[i]);
+            string dir = get<2>(node.addresses[i]);
+            string path_to = dir + path.substr(confs->zk->localDir.size(), path.size());
+            cout << "Failed to transfer file: " << ip << ":" << port << path_to << endl; 
         }
-        catch (const exception &e) {
-            cerr << "Exception in " << __PRETTY_FUNCTION__ << ": " << e.what() << "\n";
-        }
+    }
+    for (int i = 0; i < nodeNum; i++) {
+        delete promises[i];
     }
 }
 
@@ -151,6 +259,7 @@ int EventHandler::handleRemove(string path, Confs *confs, Event event)
     }
 
     try {
+        confs->notifier.ignoreFileOnce(fs::path(path));
         fs::remove_all(path);
     }
     catch(const exception &e) {
@@ -178,8 +287,7 @@ int EventHandler::handleMove(string path_from, string path_to, Confs *confs)
     }
     else if(fs::is_regular_file(path_from)){
         try {
-            fs::copy_file(path_from, path_to, fs::copy_option::overwrite_if_exists);
-            fs::remove(path_from);
+            fs::rename(path_from, path_to);
         }
         catch (const exception &e) {
             cout << e.what() << '\n';
@@ -194,7 +302,7 @@ int EventHandler::solveEvent(string eventId, json event, Confs *confs)
     string ip = event["ip"];
     string mountPath = event["path"];
     string port = event["port"];
-    if (ip == confs->zk->localIp && port == confs->getPort()) {
+    if (confs->isLocalEvent(ip, port)) {
         if (event.contains("event")) {
             string path = event["event"]["path"];
             Event e = static_cast<Event>(static_cast<uint32_t>(stoul(string(event["event"]["event"]))));
@@ -209,12 +317,14 @@ int EventHandler::solveEvent(string eventId, json event, Confs *confs)
     if (event.contains("event1") && event.contains("event2")) {
         string path_from = confs->convertPath(event["event1"]["path"], mountPath);
         string path_to = confs->convertPath(event["event2"]["path"], mountPath);
+        confs->pushLocalEvent(path_from);
+        confs->pushLocalEvent(path_to);
         res = handleMove(path_from, path_to, confs);
 
     }
     else if (event.contains("event")) {
         string path = confs->convertPath(event["event"]["path"], mountPath);
-
+        confs->pushLocalEvent(path);
         Event e = static_cast<Event>(static_cast<uint32_t>(stoul(string(event["event"]["event"]))));
         if ((e & Event::create) != Event::none) {
             res = handleCreate(path, confs, e);

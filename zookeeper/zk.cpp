@@ -166,6 +166,8 @@ void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string
             mount, ZOO_EPHEMERAL);
     }
     this->checkAndCreate(prefix + "/events", "");
+    this->removeRecursively(prefix + "/eventState");
+    this->checkAndCreate(prefix + "/eventState", "");
 }
 
 pair<int, vector<string> > ZkUtils::ls(const string &path)
