@@ -88,6 +88,7 @@ private:
     SharedNode mNode;
     std::atomic<bool> mHandlingEvent;
     std::string mHandlingId;
+    std::string lastId;
     boost::shared_mutex mEventMutex;
     boost::shared_mutex mNodeMutex;
     boost::shared_mutex localEventsMutex;

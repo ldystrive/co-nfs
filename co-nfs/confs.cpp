@@ -145,6 +145,7 @@ void Confs::updateNode()
     auto _node = pullNode();
     if (_node) {
         setNode(*_node);
+        //this->mNode.setNode(*_node);
     }
 }
 
@@ -470,7 +471,7 @@ string Confs::convertPath(string rawPath, string baseDir)
 bool Confs::tryStartEvent(string id)
 {
     boost::unique_lock<boost::shared_mutex> m(mEventMutex);
-    if (mHandlingEvent || id == mHandlingId) return false;
+    if (mHandlingEvent || id == mHandlingId || lastId == id) return false;
     mHandlingId = id;
     return mHandlingEvent = true;
 }
@@ -478,6 +479,8 @@ bool Confs::tryStartEvent(string id)
 void Confs::stopEvent()
 {
     boost::unique_lock<boost::shared_mutex> m(mEventMutex);
+    lastId = mHandlingId;
+    mHandlingId = "";
     mHandlingEvent = false;
 }
 

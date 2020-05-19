@@ -63,6 +63,7 @@ void EventHandler::checkEventFinished(Confs *confs)
     cout << "Remove: " << eventsPath << endl;
     confs->zk->removeRecursively(statePath);
     confs->zk->remove(eventsPath);
+    //while (confs->zk->exists(eventsPath) != ZNONODE) {}
     if (!pullTimes) {
         cout << "Timeout. not all clients finished" << endl;
     }
@@ -70,15 +71,20 @@ void EventHandler::checkEventFinished(Confs *confs)
 
 void EventHandler::receivedFile(Confs *confs)
 {
+    boost::unique_lock<boost::shared_mutex> m(downloadReceivedMutex);
+    while (confs->getHandlingId() == "") {}
     string path = confs->zk->getNodePath() + "/eventState/" + confs->getHandlingId();
     string subPath = path + "/" + confs->zk->localIp + "_" + confs->getPort();
     cout << GREEN << "received file" << " state path:" << subPath << " " << confs->zk->exists(subPath) << RESET << endl;
     // this_thread::sleep_for(chrono::minutes(600));
+    cout << RED << "begin " << confs->zk->exists(subPath) << RESET << endl;
     while (confs->zk->exists(subPath) != ZOK) { 
+        cout << RED << confs->zk->exists(subPath) << RESET << endl;
         this_thread::sleep_for(chrono::milliseconds(200));
     }
-    confs->stopEvent();
+    cout << RED << "end " << confs->zk->exists(subPath) << RESET << endl;
     confs->zk->remove(subPath);
+    confs->stopEvent();
 }
 
 void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
@@ -88,8 +94,10 @@ void events_cb(zhandle_t *zh, int type, int state, const char *path, void *ctx)
     zoo_awget_children(zh, path, events_cb, ctx, future_strings_completion_cb, NULL);
 
     Confs *confs = static_cast<Confs *>(ctx);
+    boost::shared_mutex &downloadMutex = confs->eventHandler.downloadMutex;
 
-    confs->mPool->enqueue([confs](){
+    confs->mPool->enqueue([confs, &downloadMutex](){
+        boost::unique_lock<boost::shared_mutex> m(downloadMutex);
         confs->updateEventQueue();
         auto value = confs->eventQueue.getQueue();
         cout << "new event queue:" << endl;

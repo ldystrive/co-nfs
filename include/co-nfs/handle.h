@@ -36,6 +36,8 @@ public:
     void receivedFile(Confs *confs);
 
     std::string statePath;
+    boost::shared_mutex downloadMutex;
+    boost::shared_mutex downloadReceivedMutex;
 
 private:
     volatile bool mRunning;

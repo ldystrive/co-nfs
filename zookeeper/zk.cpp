@@ -89,8 +89,8 @@ int ZkUtils::exists(string path)
     promise<int> *prom = new promise<int>();
     future<int> future = prom->get_future();
     int res = zoo_aexists(this->zh, path.c_str(), 0, future_rc_completion_cb, (void *)prom);
+    int rc = future.get();
     if (res == ZOK) {
-        int rc = future.get();
         delete prom;
         return rc;
     }
@@ -104,8 +104,8 @@ int ZkUtils::create(string path, string value, const int mode)
     future<pair<int, string> > future = prom->get_future();
     int res = zoo_acreate(this->zh, path.c_str(), value.c_str(), value.length(), \
         &ZOO_OPEN_ACL_UNSAFE, mode, future_string_completion_cb, (void *)prom);
+    pair<int, string> v = future.get();
     if (res == ZOK) {
-        pair<int, string> v = future.get();
         delete prom;
         return v.first;
     }
@@ -166,7 +166,7 @@ void ZkUtils::createSharedNode(string nodeName, const vector<pair<string, string
             mount, ZOO_EPHEMERAL);
     }
     this->checkAndCreate(prefix + "/events", "");
-    this->removeRecursively(prefix + "/eventState");
+    // this->removeRecursively(prefix + "/eventState");
     this->checkAndCreate(prefix + "/eventState", "");
 }
 
@@ -175,8 +175,8 @@ pair<int, vector<string> > ZkUtils::ls(const string &path)
     promise<pair<int, vector<string>>> *prom = new promise<pair<int, vector<string>>>();
     future<pair<int, vector<string>>> future = prom->get_future();
     int res = zoo_aget_children(this->zh, path.c_str(), 0, future_strings_completion_cb, prom);
+    pair<int, vector<string>> v = future.get();
     if (res == ZOK) {
-        pair<int, vector<string>> v = future.get();
         delete prom;
         return v;
     }
@@ -206,8 +206,8 @@ pair<int, string> ZkUtils::get(const string &path)
     promise<pair<int, vector<uint8_t>>> *prom = new promise<pair<int, vector<uint8_t>>>();
     future<pair<int, vector<uint8_t>>> future = prom->get_future();
     int res = zoo_aget(this->zh, path.c_str(), 0, future_data_completion_cb, prom);
+    pair<int, vector<uint8_t>> v = future.get();
     if (res ==ZOK) {
-        pair<int, vector<uint8_t>> v = future.get();
         delete prom;
         return {v.first, string(v.second.begin(), v.second.end())};
     }
@@ -230,8 +230,8 @@ int ZkUtils::remove(string path)
     promise<int> *prom = new promise<int>();
     future<int> future = prom->get_future();
     int res = zoo_adelete(this->zh, path.c_str(), -1, future_void_completion_cb, prom);
+    int v = future.get();
     if (res == ZOK) {
-        int v = future.get();
         delete prom;
         return v;
     }
